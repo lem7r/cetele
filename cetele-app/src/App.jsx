@@ -1287,7 +1287,7 @@ const DEFAULT_SETTINGS={
   defaultVis:"private",
   reduceMotion:false,
   weekStart:"sun",
-server:{on:false,url:"https://cetele-api.onrender.com"},
+server:{on:true,url:"https://cetele-api.onrender.com"},
   push:false,
 };
 const SERVER_KEY="cetele:server:v1";
@@ -2199,7 +2199,7 @@ export default function App(){
   useEffect(()=>{let live=true;
     Store.get(ACCOUNT_KEY).then((savedId)=>{if(live&&savedId&&USER_BY_ID[savedId]){setMe(savedId);setMeId(savedId);}return Store.get(AUTH_KEY);})
     .then((tok)=>{if(tok)setAuthToken(tok);return Store.get(SERVER_KEY);})
-    .then(async(sv)=>{if(!live)return;if(sv&&sv.on){setApiBase(sv.url);setSettings((s)=>({...s,server:sv}));await enterServer();}else{await hydrateLocal();}if(live)setBooted(true);});
+    .then(async(sv)=>{if(!live)return;const server=sv||DEFAULT_SETTINGS.server;if(server&&server.on){setApiBase(server.url);setSettings((s)=>({...s,server}));await enterServer();}else{await hydrateLocal();}if(live)setBooted(true);});
     return ()=>{live=false;};},[]);
   useEffect(()=>{if(hydrated.current&&!API_BASE)cohortStore.save(subscribed);},[subscribed,cohortRev]);
   useEffect(()=>{let live=true;Store.get(ONBOARDED_KEY).then((v)=>{if(live&&!v)setShowOnboarding(true);});return ()=>{live=false;};},[]);
