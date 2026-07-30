@@ -206,7 +206,7 @@ const PFP_BY_ID=Object.fromEntries(PFPS.map((p)=>[p.id,p]));
    Set API_BASE to your server (e.g. "http://localhost:4000") to pull from the real
    backend. Left null, the same calls run against an embedded mirror so the prototype
    works in the sandbox, with optional cross-session persistence via artifact storage. */
-let API_BASE="https://cetele-api.onrender.com";
+let API_BASE=null;
 const setApiBase=(v)=>{API_BASE=(v&&String(v).trim())||null;};
 let AUTH_TOKEN=null;
 const setAuthToken=(t)=>{AUTH_TOKEN=t||null;};
