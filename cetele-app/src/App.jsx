@@ -2155,7 +2155,7 @@ export default function App(){
     try{
       const meUser=await api.me();if(meUser)setProfile(profileFromUser(meUser));
       const cohorts=await api.loadCohorts();
-      if(cohorts&&Object.keys(cohorts).length){cohortStore.apply(cohorts);setSubscribed(Object.keys(cohorts).filter((id)=>cohorts[id].members.some((m)=>m.id===ME)));}
+      if(cohorts){cohortStore.apply(cohorts);setSubscribed(Object.keys(cohorts).filter((id)=>cohorts[id].members.some((m)=>m.id===ME)));}
       const gs=await api.loadGoals(seedGoalsFor(ME));if(gs)setGoals(gs);
       const cf=await api.loadFeed("cohort",null,25);if(cf){setFeed(cf);setFeedMore((mm)=>({...mm,cohort:cf.length>=25}));}
       const ff=await api.loadFeed("friend",null,25);if(ff){setFriendFeed(ff);setFeedMore((mm)=>({...mm,friend:ff.length>=25}));}
