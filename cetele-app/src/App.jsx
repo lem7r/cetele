@@ -1287,7 +1287,7 @@ const DEFAULT_SETTINGS={
   defaultVis:"private",
   reduceMotion:false,
   weekStart:"sun",
-  server:{on:false,url:"http://localhost:4000"},
+server:{on:false,url:"https://cetele-api.onrender.com"},
   push:false,
 };
 const SERVER_KEY="cetele:server:v1";
