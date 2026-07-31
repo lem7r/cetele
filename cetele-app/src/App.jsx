@@ -219,7 +219,7 @@ const PFPS=[
 ];
 const PFP_BY_ID=Object.fromEntries(PFPS.map((p)=>[p.id,p]));
 
-/* ===== data layer — Çetele API client (contract mirrors cetele-backend/) =====
+/* ===== data layer — Kohort API client (contract mirrors cetele-backend/) =====
    Set API_BASE to your server (e.g. "http://localhost:4000") to pull from the real
    backend. Left null, the same calls run against an embedded mirror so the prototype
    works in the sandbox, with optional cross-session persistence via artifact storage. */
@@ -403,7 +403,7 @@ const SEED_FRIEND_REQS={incoming:[{id:1,fromId:"u_zeynep"},{id:2,fromId:"u_baran
 const urlB64ToBytes=(b64)=>{const pad="=".repeat((4-(b64.length%4))%4);const s=(b64+pad).replace(/-/g,"+").replace(/_/g,"/");const raw=atob(s);return Uint8Array.from([...raw].map((c)=>c.charCodeAt(0)));};
 const FRIENDS_KEY="cetele:friends:v1";
 const COHORTS_KEY="cetele:cohorts:v1";
-const COHORT_EXPAND_KEY="cetele:cohortExpanded:v1";  // which cohort goal-groups are open on the Çetele tab
+const COHORT_EXPAND_KEY="cetele:cohortExpanded:v1";  // which cohort goal-groups are open on the Tally tab
 const SUBS_KEY="cetele:subs:v1";
 const FRIEND_FEED=[
   {id:"ff1",who:"u_yusuf",kind:"streak",goal:"Daily steps",detail:"hit a 40-day streak",mins:18,cheers:6,cheered:false},
@@ -473,6 +473,31 @@ function TallyMarks({count,color=PINE,scale=1}){
       {[0,1,2,3].map((i)=>i<Math.min(n,4)?<line key={i} x1={4+i*6} y1={2} x2={4+i*6} y2={20} stroke={color} strokeWidth={2.4} strokeLinecap="round"/>:null)}
       {n===5&&<line x1={1} y1={4} x2={25} y2={18} stroke={color} strokeWidth={2.4} strokeLinecap="round"/>}
     </svg>))}</div>;
+}
+// Kohort mark — the tally-K (logo #1). `boxed` puts it on a Pine Deep tile (app-icon style).
+function Logo({size=32,boxed=true,pillar="#a7f3d0",arm="#6ee7d0",bg="#0c6157",radius}){
+  const mark=(
+    <svg width={size*0.66} height={size*0.66} viewBox="0 0 96 96" fill="none">
+      <g stroke={pillar} strokeWidth={6.5} strokeLinecap="round"><line x1="34" y1="22" x2="34" y2="74"/><line x1="44" y1="22" x2="44" y2="74"/><line x1="29" y1="22" x2="49" y2="22"/><line x1="29" y1="74" x2="49" y2="74"/></g>
+      <g stroke={arm} strokeWidth={6.5} strokeLinecap="round"><line x1="26" y1="60" x2="73" y2="20"/><line x1="45" y1="43" x2="73" y2="74"/></g>
+    </svg>
+  );
+  if(!boxed)return mark;
+  return <div className="flex items-center justify-center" style={{width:size,height:size,background:bg,borderRadius:radius??size*0.32}}>{mark}</div>;
+}
+function Wordmark({size=22,color=INK}){
+  return <span style={{fontFamily:"'Quicksand',ui-sans-serif,sans-serif",fontWeight:600,fontSize:size,color,letterSpacing:-0.5}}>Kohort</span>;
+}
+// Systematized empty state: soft icon tile + title + line + optional action. One consistent look everywhere.
+function EmptyState({icon:Ic,title,body,action,onAction,soft}){
+  return (
+    <div className="rounded-2xl p-7 text-center flex flex-col items-center" style={soft?{background:SUNKEN}:{border:`2px dashed ${BORDER2}`}}>
+      {Ic&&<div className="flex items-center justify-center rounded-2xl mb-2.5" style={{width:44,height:44,background:PINE_SOFT}}><Ic size={20} style={{color:PINE}}/></div>}
+      {title&&<p className="font-semibold" style={{fontSize:14.5,color:INK}}>{title}</p>}
+      {body&&<p style={{fontSize:12.5,color:INK3,marginTop:3,lineHeight:1.5,maxWidth:280}}>{body}</p>}
+      {action&&<button onClick={onAction} className="mt-3.5 rounded-full font-semibold px-4" style={{height:38,background:PINE,color:"#fff",fontSize:13}}>{action}</button>}
+    </div>
+  );
 }
 function StreakBadge({n,small}){
   return <span className="inline-flex items-center gap-1 font-semibold rounded-full" style={{color:STREAK,background:STREAK_SOFT,fontSize:small?11:12.5,padding:small?"2px 7px":"3px 9px"}}><Flame size={small?12:14} style={{fill:"#fed7aa"}}/> {n}</span>;
@@ -565,7 +590,7 @@ function GoalCard({g,onSetValue,onToggle,onEditVis,onEdit,onDelete,onOpen,canMan
         ):g.type==="binary"?(
           <button onClick={()=>onToggle(g.id,selectedIso)} className="w-full flex items-center justify-between rounded-xl px-3.5" style={{height:46,background:met?PINE_SOFT:"transparent",border:met?"none":`1.5px solid ${BORDER2}`}}>
             <span className="font-semibold" style={{color:met?PINE_DEEP:INK2,fontSize:14}}>{met?"Done":`Mark ${isToday?"done":dayLabel+" done"}`}</span>
-            <span className="flex items-center justify-center rounded-full" style={{width:26,height:26,background:met?PINE:"transparent",border:met?"none":`2px solid ${BORDER2}`}}>{met&&<Check size={15} color="#fff" strokeWidth={3}/>}</span>
+            <span key={met?"m":"u"} className="flex items-center justify-center rounded-full" style={{width:26,height:26,background:met?PINE:"transparent",border:met?"none":`2px solid ${BORDER2}`}}>{met&&<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><polyline points="5 13 10 18 19 6" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="cz-draw" style={{"--cz-dash":30}}/></svg>}</span>
           </button>
         ):(
           <div>
@@ -656,7 +681,7 @@ function MentorScreen({cohorts,goals,onOpenMentee,onOpenGoal,onAddGoal,onNudge,n
             <div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2 min-w-0"><Ic size={17} style={{color:INK2,flexShrink:0}}/><span className="font-semibold" style={{fontSize:14,color:INK,overflowWrap:"anywhere"}}>{g.title}</span></div><div className="flex items-center gap-1.5 shrink-0"><span className="font-semibold" style={{fontSize:13,color:mentees.length?(pp>=70?PINE:STREAK):INK3}}>{mentees.length?`${met}/${mentees.length}`:"—"}</span>{mentees.length>0&&<ChevronRight size={16} style={{color:INK3}}/>}</div></div>
             <div className="h-2 rounded-full overflow-hidden" style={{background:SUNKEN}}><div className="h-full rounded-full" style={{width:`${mentees.length?pp:0}%`,background:pp>=70?PINE:"#e7a33e"}}/></div>
           </button>);})}
-        {cohortGoals.length===0&&<div className="rounded-2xl p-5 text-center" style={{border:`2px dashed ${BORDER2}`}}><p style={{fontSize:13,color:INK3}}>No cohort goals yet. Tap <b style={{color:INK2}}>Add goal</b> to set one for {c.name}.</p></div>}
+        {cohortGoals.length===0&&<EmptyState icon={Target} title="No cohort goals yet" body={`Tap Add goal to set the first shared goal for ${c.name}.`}/>}
       </div>
     </div>
   );
@@ -676,13 +701,13 @@ function NoCohortsScreen({onJoinOpen,onCreateOpen}){
       <div className="flex items-center gap-1.5 mt-3" style={{color:INK3}}><Ticket size={14}/><span style={{fontSize:12.5}}>Have an invite code? Enter it when you join.</span></div>
       <div className="mt-8 rounded-2xl p-4 flex items-start gap-3" style={{background:SUNKEN,maxWidth:330}}>
         <Sparkles size={18} style={{color:PINE,marginTop:1}}/>
-        <p style={{fontSize:12.5,color:INK2,textAlign:"left",lineHeight:1.5}}>Your <b style={{color:INK}}>personal goals</b> still live in the Çetele tab — you can keep tracking on your own anytime.</p>
+        <p style={{fontSize:12.5,color:INK2,textAlign:"left",lineHeight:1.5}}>Your <b style={{color:INK}}>personal goals</b> still live in the Tally tab — you can keep tracking on your own anytime.</p>
       </div>
     </div>
   );
 }
 
-/* ---------- Çetele ---------- */
+/* ---------- Tally (main tab) ---------- */
 function CohortGroup({cohortId,goals,expanded,onToggle,selectedIso,onSetValue,onToggleGoal,onEdit,onDelete,onOpenGoal}){
   const th=themeOf(cohortId);const c=COHORTS[cohortId];const name=(c&&c.name)||"Cohort";
   const done=goals.filter((g)=>metOnDate(g,selectedIso)).length;
@@ -1232,7 +1257,7 @@ function CohortSettingsSheet({cohortId,onClose,onSave,onSetRole,onRemoveMember,o
       <label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Short description</label>
       <input value={desc} onChange={(e)=>setDesc(e.target.value.slice(0,60))} placeholder="What this cohort is about" className="w-full rounded-xl px-3.5 mt-1.5 mb-5 outline-none" style={{height:46,border:`1px solid ${BORDER2}`,fontSize:14,color:INK,background:"#fff"}}/>
       <label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Theme</label>
-      <p style={{fontSize:12,color:INK3,marginTop:2,marginBottom:8}}>Colors this cohort's shared goals across everyone's Çetele.</p>
+      <p style={{fontSize:12,color:INK3,marginTop:2,marginBottom:8}}>Colors this cohort's shared goals across everyone's Kohort.</p>
       <div className="mb-3"><ThemePicker value={theme} onChange={setTheme}/></div>
       <div className="mb-4"><CohortPreview name={clean} theme={theme} desc={desc.trim()}/></div>
       <button disabled={!ok||!dirty} onClick={()=>onSave(cohortId,{name:clean,fullName:`${clean} Cohort`,theme,description:desc.trim()})} className="w-full rounded-2xl py-3.5 font-semibold mb-6" style={{background:(ok&&dirty)?PINE:SUNKEN,color:(ok&&dirty)?"#fff":INK3,fontSize:15}}>Save changes</button>
@@ -1385,7 +1410,7 @@ function SettingsScreen({settings,onChange,subscribed,onLeave,onJoinOpen,onReset
             <div className="flex items-center gap-3"><div className="flex items-center justify-center rounded-lg shrink-0" style={{width:30,height:30,background:SUNKEN}}><Database size={16} style={{color:INK2}}/></div><span className="font-semibold" style={{fontSize:14,color:INK}}>Backend</span></div>
             <div style={{width:168}}><Seg options={[{v:"demo",l:"Demo"},{v:"server",l:"Server"}]} value={settings.server.on?"server":"demo"} onChange={(v)=>onServerChange({...settings.server,on:v==="server"})}/></div>
           </div>
-          <p style={{fontSize:11.5,color:INK3,marginLeft:42}}>{settings.server.on?"Reads and writes go to your running Çetele server.":"Runs fully in the browser with local persistence."}</p>
+          <p style={{fontSize:11.5,color:INK3,marginLeft:42}}>{settings.server.on?"Reads and writes go to your running Kohort server.":"Runs fully in the browser with local persistence."}</p>
           {settings.server.on&&(<>
             <input value={settings.server.url} onChange={(e)=>onServerChange({...settings.server,url:e.target.value})} placeholder="http://localhost:4000" spellCheck={false} className="w-full rounded-xl px-3.5 mt-3 outline-none" style={{height:42,border:`1px solid ${BORDER2}`,fontSize:13,color:INK,background:"#fff"}}/>
             <div className="flex items-center justify-between mt-3">
@@ -1463,11 +1488,11 @@ function SettingsScreen({settings,onChange,subscribed,onLeave,onJoinOpen,onReset
         <SettingRow icon={LogOut} label="Sign out" onClick={settings.server.on?onSignOut:undefined} right={settings.server.on?<ChevronRight size={18} style={{color:INK3}}/>:<SoonPill/>}/>
         <SettingRow icon={Trash2} label="Delete account" danger last onClick={()=>setConfirm({kind:"delete"})} right={<ChevronRight size={18} style={{color:CHEER}}/>}/>
       </GroupCard>
-      <p style={{fontSize:11.5,color:INK3,margin:"0 4px 26px",lineHeight:1.45}}>Switch account lets you experience Çetele as any cohort member. Secure sign-in, passwords, and sync arrive with the backend.</p>
+      <p style={{fontSize:11.5,color:INK3,margin:"0 4px 26px",lineHeight:1.45}}>Switch account lets you experience Kohort as any cohort member. Secure sign-in, passwords, and sync arrive with the backend.</p>
 
       <div className="flex flex-col items-center text-center pt-2">
-        <div className="flex items-center justify-center rounded-2xl mb-2.5" style={{width:44,height:44,background:PINE}}><TallyMarks count={4} color="#a7f3d0" scale={0.7}/></div>
-        <div style={{fontFamily:FD,fontSize:16,fontWeight:600,color:INK}}>Çetele 1.2.2</div>
+        <div className="mb-2.5"><Logo size={44}/></div>
+        <div style={{fontFamily:FD,fontSize:16,fontWeight:600,color:INK}}>Kohort 1.2.3</div>
         <p style={{fontSize:12,color:INK3,marginTop:2}}>Made for cohorts who keep each other going.</p>
         <div className="flex items-center gap-3 mt-3" style={{fontSize:12,color:INK2}}><span className="inline-flex items-center gap-1">Terms <SoonPill/></span><span style={{color:BORDER2}}>·</span><span className="inline-flex items-center gap-1">Privacy <SoonPill/></span></div>
       </div>
@@ -1662,7 +1687,7 @@ function AccountPicker({current,onPick,onClose}){
   const roster=accountRoster();
   return (
     <Sheet title="Switch account" onClose={onClose}>
-      <p style={{fontSize:12.5,color:INK3,marginBottom:12,lineHeight:1.5}}>See Çetele as any cohort member — your cohorts, role, mentor view, and standing all update to match. Passwords and secure sign-in arrive with the backend.</p>
+      <p style={{fontSize:12.5,color:INK3,marginBottom:12,lineHeight:1.5}}>See Kohort as any cohort member — your cohorts, role, mentor view, and standing all update to match. Passwords and secure sign-in arrive with the backend.</p>
       <div className="space-y-2">
         {roster.map((a)=>{const on=a.id===current;return(
           <button key={a.id} onClick={()=>onPick(a.id)} className="w-full flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left" style={{background:on?PINE_SOFT:SUNKEN,border:on?`1.5px solid ${PINE}`:"1.5px solid transparent"}}>
@@ -1716,9 +1741,9 @@ function AuthScreen({serverUrl,onAuthed,onBackToDemo}){
   if(pending)return <RecoveryPanel code={pending.recoveryCode} context={pending.context} onContinue={()=>onAuthed(pending.token,pending.user)}/>;
   return (
     <div className="px-5 pt-10 pb-28 flex flex-col items-center" style={{minHeight:"70vh"}}>
-      <div className="flex items-center justify-center rounded-2xl mb-4" style={{width:56,height:56,background:PINE}}><TallyMarks count={4} color="#a7f3d0" scale={0.85}/></div>
+      <div className="mb-4"><Logo size={56}/></div>
       <h1 style={{fontFamily:FD,fontSize:27,fontWeight:600,color:INK,letterSpacing:-0.5}}>{reset?"Reset your password":signup?"Create your account":"Welcome back"}</h1>
-      <p style={{fontSize:13,color:INK3,marginTop:4,marginBottom:22,textAlign:"center"}}>{reset?"Enter your recovery code and a new password.":signup?"Pick a handle and password to start tallying.":"Sign in to your Çetele account."}</p>
+      <p style={{fontSize:13,color:INK3,marginTop:4,marginBottom:22,textAlign:"center"}}>{reset?"Enter your recovery code and a new password.":signup?"Pick a handle and password to start tallying.":"Sign in to your Kohort account."}</p>
       <div className="w-full" style={{maxWidth:340}}>
         {signup&&(<>
           <label style={{fontSize:12,fontWeight:600,color:INK2}}>Name</label>
@@ -1750,7 +1775,7 @@ function AuthScreen({serverUrl,onAuthed,onBackToDemo}){
 
 /* ---------- first-run onboarding ---------- */
 const ONBOARD_STEPS=[
-  {Icon:null,title:"Welcome to Çetele",body:"A çetele is a running tally — a simple mark for each day you show up. Çetele turns that into habits you keep with other people."},
+  {Icon:null,title:"Welcome to Kohort",body:"A çetele is a running tally — a simple mark for each day you show up. Kohort turns that into habits you keep with other people."},
   {Icon:Users,title:"Cohorts keep you going",body:"Join a cohort and its mentor sets shared goals. Everyone tallies their own progress and cheers each other on — reciprocity, not surveillance."},
   {Icon:Sparkles,title:"Two kinds of goals",body:"Mark a goal done for the day, or log an amount like pages or minutes. You can log today and the two days before it — older days lock so the tally stays honest."},
   {Icon:ShieldCheck,title:"You choose who sees what",body:"Every personal goal carries a visibility: keep it private, share with your mentors, your cohort, specific people, or everyone."},
@@ -2465,7 +2490,7 @@ export default function App(){
   };
   const resetDemo=()=>{setMe(DEFAULT_ME);setMeId(DEFAULT_ME);Store.set(ACCOUNT_KEY,null);setAuthToken(null);Store.set(AUTH_KEY,null);setAuthed(false);cohortStore.restoreSeed();cohortStore.clear();setApiBase(null);Store.set(SERVER_KEY,null);setServerStatus(null);setGoals(SEED_GOALS_PD);api.clear();setFeed(SEED_FEED);setFeedMore({cohort:false,friend:false});setCohortExpanded({});Store.set(COHORT_EXPAND_KEY,{});setWall(WALL_SEED);setSubscribed(subscribedFor(DEFAULT_ME));setNudged({});setSettings(DEFAULT_SETTINGS);setProfile(profileFor(DEFAULT_ME));setEditProfile(false);setSelectedIso(TODAY_ISO);setOpenMember(null);setSheet(null);setShowSettings(false);setShowAccounts(false);setShowSearch(false);setShowNotifs(false);setNotifications(SEED_NOTIFS);setFriendReqs(SEED_FRIEND_REQS);setCohortRev((v)=>v+1);setTab(mentorCohorts().length?"mentor":"cetele");};
 
-  const tabs=[{id:"feed",label:"Feed",icon:Home},{id:"cetele",label:"Çetele",icon:Sparkles},{id:"cohort",label:"Cohort",icon:Users},...(mentoredSubscribed.length?[{id:"mentor",label:"Mentor",icon:GraduationCap}]:[]),{id:"insights",label:"Insights",icon:BarChart3}];
+  const tabs=[{id:"feed",label:"Feed",icon:Home},{id:"cetele",label:"Tally",icon:Sparkles},{id:"cohort",label:"Cohort",icon:Users},...(mentoredSubscribed.length?[{id:"mentor",label:"Mentor",icon:GraduationCap}]:[]),{id:"insights",label:"Insights",icon:BarChart3}];
   const safeTab=tabs.some((t)=>t.id===tab)?tab:"cetele";
   const noCohorts=subscribed.length===0;
   const onAuthScreen=settings.server.on&&!authed;   // sign-in takeover: hide chrome + first-run/recap overlays
@@ -2476,8 +2501,13 @@ export default function App(){
 
   return (
     <div className="w-full flex justify-center" style={{background:BORDER2,minHeight:"100vh"}}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap');
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=Quicksand:wght@500;600;700&display=swap');
         .cz,.cz *{font-family:${FU}} .cz button{cursor:pointer;transition:transform .1s} .cz button:active{transform:scale(.97)}
+        .cz{font-variant-numeric:tabular-nums}                                   /* stats never jitter as numbers change */
+        .cz{background-image:radial-gradient(rgba(28,25,23,.022) 0.5px, transparent 0.5px);background-size:14px 14px}   /* faint paper texture */
+        @keyframes czdraw{from{stroke-dashoffset:var(--cz-dash,60)}to{stroke-dashoffset:0}}
+        .cz-draw{stroke-dasharray:var(--cz-dash,60);animation:czdraw .34s cubic-bezier(.3,.7,.3,1) forwards}          /* tally stroke draws in on log */
+        .cz-rule{height:0;border:0;border-top:1.5px dashed ${BORDER2};margin:0}                                        /* tally-style divider */
         .cz :focus-visible{outline:2px solid ${PINE};outline-offset:2px}
         .cz ::-webkit-scrollbar{display:none}
         .cz input[type=number]::-webkit-inner-spin-button,.cz input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
@@ -2489,12 +2519,12 @@ export default function App(){
         .czspin{animation:czspin .7s linear infinite}
         @keyframes czshim{0%,100%{opacity:.5}50%{opacity:1}}
         .czshim{animation:czshim 1.3s ease-in-out infinite}
-        @media (prefers-reduced-motion: reduce){.czsheet,.czpop,.czspin,.czshim{animation:none}.cz button:active{transform:none}}
-        .cz-reduce .czsheet,.cz-reduce .czpop,.cz-reduce .czspin,.cz-reduce .czshim{animation:none}.cz-reduce button:active{transform:none}`}</style>
+        @media (prefers-reduced-motion: reduce){.czsheet,.czpop,.czspin,.czshim,.cz-draw{animation:none}.cz button:active{transform:none}}
+        .cz-reduce .czsheet,.cz-reduce .czpop,.cz-reduce .czspin,.cz-reduce .czshim,.cz-reduce .cz-draw{animation:none}.cz-reduce button:active{transform:none}`}</style>
 
       <div lang="en" data-rev={cohortRev} className={"cz w-full flex flex-col"+(settings.reduceMotion?" cz-reduce":"")} style={{maxWidth:430,background:CANVAS,minHeight:"100vh"}}>
         {!onAuthScreen&&<header className="sticky top-0 px-4 py-3 flex items-center justify-between" style={{zIndex:60,background:"#faf9f7e6",backdropFilter:"blur(8px)",borderBottom:`1px solid ${BORDER}`}}>
-          <button onClick={()=>{setShowSettings(false);setEditProfile(false);setShowSearch(false);setShowNotifs(false);setOpenMember(null);setDetailGoalId(null);setMentorView(null);}} aria-label="Home" className="flex items-center gap-2"><div className="flex items-center justify-center rounded-xl" style={{width:32,height:32,background:PINE}}><TallyMarks count={4} color="#a7f3d0" scale={0.6}/></div><span style={{fontFamily:FD,fontWeight:600,fontSize:22,color:INK,letterSpacing:-0.5}}>Çetele</span></button>
+          <button onClick={()=>{setShowSettings(false);setEditProfile(false);setShowSearch(false);setShowNotifs(false);setOpenMember(null);setDetailGoalId(null);setMentorView(null);}} aria-label="Home" className="flex items-center gap-2"><Logo size={32}/><Wordmark size={22}/></button>
           <div className="flex items-center gap-1.5">
             <button onClick={openNotifs} aria-label="Notifications" className="flex items-center justify-center rounded-full" style={{position:"relative",width:34,height:34,color:showNotifs?PINE:INK2,background:showNotifs?PINE_SOFT:"transparent"}}><Bell size={20}/>{inboxCount>0&&<span className="flex items-center justify-center rounded-full" style={{position:"absolute",top:2,right:2,minWidth:15,height:15,padding:"0 3px",background:CHEER,color:"#fff",fontSize:9,fontWeight:800,lineHeight:1}}>{inboxCount>9?"9+":inboxCount}</span>}</button>
             <button onClick={()=>{setOpenMember(null);setEditProfile(false);setShowSettings(false);setDetailGoalId(null);setShowNotifs(false);setShowSearch(true);}} aria-label="Search" className="flex items-center justify-center rounded-full" style={{width:34,height:34,color:showSearch?PINE:INK2,background:showSearch?PINE_SOFT:"transparent"}}><SearchIcon size={20}/></button>
