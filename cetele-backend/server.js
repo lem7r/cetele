@@ -593,6 +593,16 @@ app.post("/api/goals/:id/logs", requireAuth, (req, res) => {
 });
 
 // --- cohort create / update (mentor-owned) ---
+// invite codes: 5 random uppercase letters (not derived from the name), collision-checked
+function randomInviteCode() {
+  const A = "ABCDEFGHIJKLMNPQRSTUVWXYZ";
+  for (let attempt = 0; attempt < 40; attempt++) {
+    let code = "";
+    for (let i = 0; i < 5; i++) code += A[Math.floor(Math.random() * A.length)];
+    if (!db.prepare("SELECT 1 FROM cohorts WHERE invite_code = ?").get(code)) return code;
+  }
+  return "K" + Date.now().toString(36).slice(-4).toUpperCase();
+}
 app.post("/api/cohorts", requireAuth, createLimiter, (req, res) => {
   const name = cleanText(req.body.name, 24);
   const fullName = cleanText(req.body.fullName || (name ? name + " Cohort" : ""), 40);
@@ -600,8 +610,7 @@ app.post("/api/cohorts", requireAuth, createLimiter, (req, res) => {
   const id = "c_" + Date.now().toString(36);
   const theme = cleanText(req.body.theme, 16) || "pine";
   const description = cleanText(req.body.description, 60, true);
-  const base = name.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5) || "COHORT";
-  const inviteCode = `${base}-${100 + ([...id].reduce((a, ch) => a + ch.charCodeAt(0), 0) % 900)}`;
+  const inviteCode = randomInviteCode();
   db.prepare("INSERT INTO cohorts (id,name,full_name,description,theme,invite_code,marks,target) VALUES (?,?,?,?,?,?,0,7)")
     .run(id, name, fullName, description, theme, inviteCode);
   db.prepare(`INSERT INTO cohort_members (cohort_id,user_id,role,week_pct,streak,logged_today,trend)
@@ -923,10 +932,9 @@ app.post("/api/cohorts/:id/invite/regenerate", requireAuth, (req, res) => {
   const cid = req.params.id;
   const role = db.prepare("SELECT role FROM cohort_members WHERE cohort_id = ? AND user_id = ?").get(cid, req.userId);
   if (!role || role.role !== "mentor") return res.status(403).json({ error: "only a mentor can regenerate the invite code" });
-  const c = db.prepare("SELECT name FROM cohorts WHERE id = ?").get(cid);
+  const c = db.prepare("SELECT id FROM cohorts WHERE id = ?").get(cid);
   if (!c) return res.status(404).json({ error: "cohort not found" });
-  const base = (c.name || "COHORT").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5) || "COHORT";
-  const code = `${base}-${100 + Math.floor(Math.random() * 900)}`;
+  const code = randomInviteCode();
   db.prepare("UPDATE cohorts SET invite_code = ? WHERE id = ?").run(code, cid);
   res.json({ inviteCode: code });
 });

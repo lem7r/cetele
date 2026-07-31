@@ -61,6 +61,18 @@ const COHORTS={
 };
 const COHORTS_SEED=JSON.parse(JSON.stringify(COHORTS));
 const cohortIds=()=>Object.keys(COHORTS);
+const fmtAgo=(m)=>{                     // compact relative time: min -> h m -> d -> w -> mo -> y
+  m=Math.max(0,Math.floor(m||0));
+  if(m<1)return "just now";
+  if(m<60)return `${m}m`;
+  if(m<1440){const h=Math.floor(m/60),mm=m%60;return mm?`${h}h ${mm}m`:`${h}h`;}
+  const d=Math.floor(m/1440);
+  if(d<7)return `${d}d`;
+  if(d<30)return `${Math.floor(d/7)}w`;
+  if(d<365)return `${Math.floor(d/30)}mo`;
+  return `${Math.floor(d/365)}y`;
+};
+const fmtAgoLabel=(m)=>{const s=fmtAgo(m);return s==="just now"?s:`${s} ago`;};
 const inviteCode=(id)=>{const c=COHORTS[id];if(!c)return"";if(c.inviteCode)return c.inviteCode;const base=(c.name||"cohort").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8)||"COHORT";return `${base}-${100+(hash(id)%900)}`;};
 const cohortByCode=(code)=>{const q=(code||"").trim().toLowerCase();return cohortIds().find((id)=>inviteCode(id).toLowerCase()===q);};
 const DEFAULT_SUBS=["sunrise","northstar","horizon"];
@@ -623,7 +635,7 @@ function MentorScreen({cohorts,goals,onOpenMentee,onOpenGoal,onAddGoal,onNudge,n
         <div className="rounded-2xl p-8 text-center" style={{border:`2px dashed ${BORDER2}`}}>
           <UserPlus size={24} style={{color:INK3}} className="mx-auto mb-2"/>
           <p className="font-semibold" style={{fontSize:14.5,color:INK}}>No mentees yet</p>
-          <p style={{fontSize:12.5,color:INK3,marginTop:3}}>Invite people to {c.fullName} and they'll appear here with their weekly progress. Set shared goals from the Çetele tab so they have something to log.</p>
+          <p style={{fontSize:12.5,color:INK3,marginTop:3}}>Invite people to {c.fullName} and they'll appear here with their weekly progress. You can still set shared goals below — they'll be ready the moment someone joins.</p>
         </div>
       ):(<>
 
@@ -634,18 +646,18 @@ function MentorScreen({cohorts,goals,onOpenMentee,onOpenGoal,onAddGoal,onNudge,n
         <div className="space-y-2.5 mb-6">{atRisk.map((m)=><MenteeRow key={m.id} m={m} onOpenMember={(id)=>onOpenMentee(safe,id)} onNudge={onNudge} nudged={nudged}/>)}</div>
       )}
       {onTrack.length>0&&(<><Eyebrow>On track</Eyebrow><div className="space-y-2.5 mb-6">{onTrack.map((m)=><MenteeRow key={m.id} m={m} onOpenMember={(id)=>onOpenMentee(safe,id)} onNudge={onNudge} nudged={nudged}/>)}</div></>)}
+      </>)}
 
-      <div className="flex items-center justify-between mb-1"><Eyebrow style={{margin:0}}>Goal adherence</Eyebrow><button onClick={()=>onAddGoal(safe)} className="inline-flex items-center gap-1 rounded-full font-semibold" style={{fontSize:12.5,color:PINE_DEEP,background:PINE_SOFT,padding:"5px 11px"}}><Plus size={14}/> Add goal</button></div>
-      <p style={{fontSize:12,color:INK3,marginBottom:10}}>Tap a goal to compare every member's progress.</p>
+      <div className="flex items-center justify-between mb-1"><Eyebrow style={{margin:0}}>Cohort goals</Eyebrow><button onClick={()=>onAddGoal(safe)} className="inline-flex items-center gap-1 rounded-full font-semibold" style={{fontSize:12.5,color:PINE_DEEP,background:PINE_SOFT,padding:"5px 11px"}}><Plus size={14}/> Add goal</button></div>
+      <p style={{fontSize:12,color:INK3,marginBottom:10}}>{mentees.length?"Tap a goal to compare every member's progress.":"Set the shared goals for this cohort now — members log against them once they join."}</p>
       <div className="space-y-2.5">
-        {cohortGoals.map((g)=>{const met=adherenceFor(g.id,mentees.length);const pp=Math.round((met/mentees.length)*100);const Ic=iconOf(g.icon);return(
-          <button key={g.id} onClick={()=>onOpenGoal(safe,g.id)} className="w-full text-left rounded-2xl p-3.5" style={{background:CARD,border:`1px solid ${BORDER}`}}>
-            <div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2 min-w-0"><Ic size={17} style={{color:INK2,flexShrink:0}}/><span className="font-semibold" style={{fontSize:14,color:INK,overflowWrap:"anywhere"}}>{g.title}</span></div><div className="flex items-center gap-1.5 shrink-0"><span className="font-semibold" style={{fontSize:13,color:pp>=70?PINE:STREAK}}>{met}/{mentees.length}</span><ChevronRight size={16} style={{color:INK3}}/></div></div>
-            <div className="h-2 rounded-full overflow-hidden" style={{background:SUNKEN}}><div className="h-full rounded-full" style={{width:`${pp}%`,background:pp>=70?PINE:"#e7a33e"}}/></div>
+        {cohortGoals.map((g)=>{const denom=Math.max(mentees.length,1);const met=mentees.length?adherenceFor(g.id,mentees.length):0;const pp=Math.round((met/denom)*100);const Ic=iconOf(g.icon);return(
+          <button key={g.id} onClick={()=>mentees.length&&onOpenGoal(safe,g.id)} className="w-full text-left rounded-2xl p-3.5" style={{background:CARD,border:`1px solid ${BORDER}`}}>
+            <div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2 min-w-0"><Ic size={17} style={{color:INK2,flexShrink:0}}/><span className="font-semibold" style={{fontSize:14,color:INK,overflowWrap:"anywhere"}}>{g.title}</span></div><div className="flex items-center gap-1.5 shrink-0"><span className="font-semibold" style={{fontSize:13,color:mentees.length?(pp>=70?PINE:STREAK):INK3}}>{mentees.length?`${met}/${mentees.length}`:"—"}</span>{mentees.length>0&&<ChevronRight size={16} style={{color:INK3}}/>}</div></div>
+            <div className="h-2 rounded-full overflow-hidden" style={{background:SUNKEN}}><div className="h-full rounded-full" style={{width:`${mentees.length?pp:0}%`,background:pp>=70?PINE:"#e7a33e"}}/></div>
           </button>);})}
         {cohortGoals.length===0&&<div className="rounded-2xl p-5 text-center" style={{border:`2px dashed ${BORDER2}`}}><p style={{fontSize:13,color:INK3}}>No cohort goals yet. Tap <b style={{color:INK2}}>Add goal</b> to set one for {c.name}.</p></div>}
       </div>
-      </>)}
     </div>
   );
 }
@@ -815,7 +827,7 @@ function FeedScreen({feed,friendFeed,friends,subscribed,onCheer,onOpenMember,onO
           <div className="flex gap-3">
             <button onClick={()=>onOpenMember(m.id)} className="shrink-0"><Avatar name={dispName(m.id,profile)} pfp={dispPfp(m.id,profile)} size={42} ring={m.role==="mentor"?STREAK:undefined}/></button>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap"><button onClick={()=>onOpenMember(m.id)} className="font-semibold" style={{color:INK,fontSize:14}}>{dispName(m.id,profile)}</button>{m.role==="mentor"&&<span className="rounded-full font-semibold" style={{fontSize:10,color:STREAK,background:STREAK_SOFT,padding:"1px 7px"}}>mentor</span>}<span style={{fontSize:12,color:INK3}}>{item.mins}m ago</span></div>
+              <div className="flex items-center gap-2 flex-wrap"><button onClick={()=>onOpenMember(m.id)} className="font-semibold" style={{color:INK,fontSize:14}}>{dispName(m.id,profile)}</button>{m.role==="mentor"&&<span className="rounded-full font-semibold" style={{fontSize:10,color:STREAK,background:STREAK_SOFT,padding:"1px 7px"}}>mentor</span>}<span style={{fontSize:12,color:INK3}}>{fmtAgoLabel(item.mins)}</span></div>
               {item.kind==="cheer"?<p className="mt-1.5" style={{color:INK,fontSize:14.5,lineHeight:1.5}}>{item.detail}</p>:<p className="mt-0.5" style={{color:INK2,fontSize:14}}>{item.goal&&<span className="font-semibold" style={{color:INK}}>{item.goal}</span>}{item.goal?" — ":""}{item.detail}</p>}
               {item.kind==="streak"&&<div className="mt-2"><StreakBadge n={34} small/></div>}
               {item.kind==="milestone"&&<div className="mt-2 inline-flex items-center gap-1 rounded-full font-semibold" style={{fontSize:11,color:PINE_DEEP,background:PINE_SOFT,padding:"2px 8px"}}><Trophy size={12}/> milestone</div>}
@@ -1151,16 +1163,16 @@ function Seg({options,value,onChange}){
 }
 function JoinSheet({onJoinCode,onClose}){
   const [code,setCode]=useState("");const [err,setErr]=useState("");const [busy,setBusy]=useState(false);
-  const fmt=(raw)=>{const s=(raw||"").toUpperCase().replace(/[^A-Z0-9]/g,"");const letters=s.replace(/[0-9]/g,"").slice(0,5);const digits=s.replace(/[^0-9]/g,"").slice(0,3);return digits?`${letters}-${digits}`:letters;};
+  const fmt=(raw)=>(raw||"").toUpperCase().replace(/[^A-Z]/g,"").slice(0,5);
   const tryCode=async()=>{if(!code.trim()||busy)return;setBusy(true);setErr("");const e=await onJoinCode(code.trim());setBusy(false);if(e)setErr(e);};
   return (
     <Sheet title="Join a cohort" onClose={onClose}>
       <label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Invite code</label>
       <div className="flex gap-2 mt-1.5 mb-1">
-        <input value={code} maxLength={9} onChange={(e)=>{setCode(fmt(e.target.value));if(err)setErr("");}} onKeyDown={(e)=>{if(e.key==="Enter")tryCode();}} placeholder="e.g. SUNNY-123" className="flex-1 rounded-xl px-3.5 outline-none" style={{height:46,border:`1px solid ${err?CHEER:BORDER2}`,fontSize:15,color:INK,background:"#fff",letterSpacing:1,fontFamily:FD}}/>
+        <input value={code} maxLength={5} onChange={(e)=>{setCode(fmt(e.target.value));if(err)setErr("");}} onKeyDown={(e)=>{if(e.key==="Enter")tryCode();}} placeholder="e.g. KDMWZ" autoCapitalize="characters" autoCorrect="off" autoComplete="off" spellCheck={false} inputMode="text" className="flex-1 rounded-xl px-3.5 outline-none" style={{height:46,border:`1px solid ${err?CHEER:BORDER2}`,fontSize:16,color:INK,background:"#fff",letterSpacing:4,fontFamily:FD,textTransform:"uppercase"}}/>
         <button disabled={!code.trim()||busy} onClick={tryCode} className="rounded-xl font-semibold px-5" style={{height:46,background:code.trim()&&!busy?PINE:SUNKEN,color:code.trim()&&!busy?"#fff":INK3,fontSize:14}}>{busy?"…":"Join"}</button>
       </div>
-      <p style={{fontSize:12,color:err?CHEER:INK3,marginBottom:18,minHeight:16}}>{err||"Ask a mentor for their cohort's invite code."}</p>
+      <p style={{fontSize:12,color:err?CHEER:INK3,marginBottom:18,minHeight:16}}>{err||"Ask a mentor for their cohort's 5-letter invite code."}</p>
       <div className="rounded-xl p-3.5 flex items-start gap-2.5" style={{background:SUNKEN}}>
         <Lock size={15} style={{color:INK2,marginTop:1}}/>
         <p style={{fontSize:12,color:INK2,lineHeight:1.5}}>Cohorts are private. You can only join one with an invite code from someone already inside.</p>
@@ -1455,7 +1467,7 @@ function SettingsScreen({settings,onChange,subscribed,onLeave,onJoinOpen,onReset
 
       <div className="flex flex-col items-center text-center pt-2">
         <div className="flex items-center justify-center rounded-2xl mb-2.5" style={{width:44,height:44,background:PINE}}><TallyMarks count={4} color="#a7f3d0" scale={0.7}/></div>
-        <div style={{fontFamily:FD,fontSize:16,fontWeight:600,color:INK}}>Çetele 1.2.1</div>
+        <div style={{fontFamily:FD,fontSize:16,fontWeight:600,color:INK}}>Çetele 1.2.2</div>
         <p style={{fontSize:12,color:INK3,marginTop:2}}>Made for cohorts who keep each other going.</p>
         <div className="flex items-center gap-3 mt-3" style={{fontSize:12,color:INK2}}><span className="inline-flex items-center gap-1">Terms <SoonPill/></span><span style={{color:BORDER2}}>·</span><span className="inline-flex items-center gap-1">Privacy <SoonPill/></span></div>
       </div>
@@ -1468,7 +1480,7 @@ function SettingsScreen({settings,onChange,subscribed,onLeave,onJoinOpen,onReset
 }
 
 /* ---------- search ---------- */
-function SearchScreen({onBack,onOpenMember,subscribed,profile,friends,statusOf,onToggleFriend}){
+function SearchScreen({onBack,onOpenMember,subscribed,profile,friends,statusOf,onToggleFriend,requests=[],onAccept,onDecline}){
   const [q,setQ]=useState("");
   const [res,setRes]=useState({users:[],cohorts:[]});
   const [loading,setLoading]=useState(false);
@@ -1489,6 +1501,20 @@ function SearchScreen({onBack,onOpenMember,subscribed,profile,friends,statusOf,o
         <input autoFocus value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Name, @username, or cohort" className="flex-1 px-2.5 outline-none" style={{fontSize:15,color:INK,background:"transparent"}}/>
         {q&&<button onClick={()=>setQ("")} className="flex items-center justify-center rounded-full" style={{width:24,height:24,background:SUNKEN,color:INK2}}><X size={14}/></button>}
       </div>
+      {empty&&requests.length>0&&(<>
+        <Eyebrow>Friend requests</Eyebrow>
+        <div className="space-y-2 mb-6">
+          {requests.map((r)=>{const pr=profileFor(r.fromId);return(
+            <div key={r.fromId} className="w-full flex items-center gap-3 rounded-2xl p-3" style={{background:MINT,border:`1px solid ${MINT_BORDER}`}}>
+              <button onClick={()=>onOpenMember(r.fromId)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                <Avatar name={pr.name} pfp={pr.avatar} size={42}/>
+                <div className="flex-1 min-w-0"><div className="font-semibold truncate" style={{fontSize:14.5,color:INK}}>{pr.name}</div><div style={{fontSize:12.5,color:PINE}}>@{pr.username}</div><div style={{fontSize:11.5,color:INK3,marginTop:1}}>wants to be friends</div></div>
+              </button>
+              <button onClick={()=>onAccept&&onAccept(r.fromId)} className="rounded-full font-semibold px-3.5" style={{height:34,background:PINE,color:"#fff",fontSize:12.5}}>Accept</button>
+              <button onClick={()=>onDecline&&onDecline(r.fromId)} className="rounded-full font-semibold px-2.5" style={{height:34,background:"#fff",color:INK2,fontSize:12.5,border:`1px solid ${BORDER2}`}}>Decline</button>
+            </div>);})}
+        </div>
+      </>)}
       {empty&&friends.length>0&&(<>
         <Eyebrow>Your friends</Eyebrow>
         <div className="space-y-2 mb-6">
@@ -1757,7 +1783,6 @@ function Onboarding({onDone}){
 
 /* ---------- notifications inbox ---------- */
 function NotificationsScreen({items,requests=[],onAccept,onDecline,onOpenMember,onBack,onMarkAll,onDismiss}){
-  const ago=(m)=>m<1?"now":m<60?`${m}m`:m<1440?`${Math.floor(m/60)}h`:`${Math.floor(m/1440)}d`;
   const anyUnread=items.some((n)=>!n.read);
   const empty=items.length===0&&requests.length===0;
   return (
@@ -1793,7 +1818,7 @@ function NotificationsScreen({items,requests=[],onAccept,onDecline,onOpenMember,
               <div className="flex items-center justify-center rounded-full shrink-0" style={{width:38,height:38,background:"#fff",border:`1px solid ${BORDER2}`}}><Ic size={18} style={{color:meta.tint}}/></div>
               <div className="flex-1 min-w-0">
                 <p style={{fontSize:13.5,color:INK,lineHeight:1.45}}>{n.text||`${who} sent you a notification`}</p>
-                <p style={{fontSize:11.5,color:INK3,marginTop:2}}>{ago(n.minsAgo||0)} ago</p>
+                <p style={{fontSize:11.5,color:INK3,marginTop:2}}>{fmtAgoLabel(n.minsAgo||0)}</p>
               </div>
               {!n.read&&<span className="rounded-full shrink-0" style={{width:8,height:8,background:meta.tint,marginTop:6}}/>}
               {onDismiss&&<button onClick={()=>onDismiss(n.id)} aria-label="Dismiss" className="shrink-0 flex items-center justify-center rounded-full" style={{width:26,height:26,background:SUNKEN,color:INK3,marginTop:-1}}><X size={14}/></button>}
@@ -2137,6 +2162,8 @@ export default function App(){
   const [feedLoadingMore,setFeedLoadingMore]=useState(false);
   const [serverStatus,setServerStatus]=useState(null);
   const [dataState,setDataState]=useState("ready"); // ready | loading | error
+  const [waking,setWaking]=useState(false);         // backend cold-start (free tier can sleep)
+  const [refreshing,setRefreshing]=useState(false); // silent background live-refresh in flight
   const [toast,setToast]=useState(null);
   const [recoveryView,setRecoveryView]=useState(null);
   const deleteAccount=async()=>{
@@ -2172,10 +2199,14 @@ export default function App(){
   useEffect(()=>{if(!toast)return;const t=setTimeout(()=>setToast(null),3400);return ()=>clearTimeout(t);},[toast]);
 
   const hydrated=useRef(false);
+  const refreshRef=useRef(null);
   const profileFromUser=(u)=>({name:u.name,username:u.username,avatar:u.avatar,bio:u.bio||"",nameChangesLeft:u.nameChangesLeft==null?2:u.nameChangesLeft});
   const hydrateFromServer=async()=>{
     setDataState("loading");
-    const health=await api.health();setServerStatus(health);
+    const wakeT=setTimeout(()=>setWaking(true),3500); // if health is slow, the server is likely waking up
+    const health=await api.health();
+    clearTimeout(wakeT);setWaking(false);
+    setServerStatus(health);
     if(!health.ok){setDataState("error");return;}
     try{
       const meUser=await api.me();if(meUser)setProfile(profileFromUser(meUser));
@@ -2190,6 +2221,23 @@ export default function App(){
       hydrated.current=true;setCohortRev((v)=>v+1);setDataState("ready");
     }catch{setDataState("error");}
   };
+  // Silent background refresh — keeps cohorts/feed/requests/notifications fresh without the loading UI.
+  const refreshLive=async()=>{
+    if(!API_BASE||!authed||(typeof document!=="undefined"&&document.hidden))return;
+    setRefreshing(true);
+    try{
+      const cohorts=await api.loadCohorts();
+      if(cohorts){cohortStore.apply(cohorts);setSubscribed(Object.keys(cohorts).filter((id)=>cohorts[id].members.some((m)=>m.id===ME)));}
+      const cf=await api.loadFeed("cohort",null,25);if(cf){setFeed(cf);setFeedMore((mm)=>({...mm,cohort:cf.length>=25}));}
+      const ff=await api.loadFeed("friend",null,25);if(ff){setFriendFeed(ff);setFeedMore((mm)=>({...mm,friend:ff.length>=25}));}
+      const frq=await api.loadFriendRequests();if(frq)setFriendReqs(frq);
+      const fr=await api.loadFriends();if(fr)setFriends(fr);
+      const ns=await api.loadNotifications();if(ns)setNotifications(ns);
+      setCohortRev((v)=>v+1);
+    }catch{/* stay on last-good data */}
+    setRefreshing(false);
+  };
+  refreshRef.current=refreshLive;
   const hydrateLocal=async()=>{
     cohortStore.restoreSeed();
     const {cohorts}=await cohortStore.load();
@@ -2214,7 +2262,20 @@ export default function App(){
   // server session lifecycle
   const enterServer=async()=>{const u=await api.me();if(u){setMe(u.id);setMeId(u.id);Store.set(ACCOUNT_KEY,u.id);setAuthed(true);await hydrateFromServer();}else{setAuthed(false);}};
   const onAuthed=async(token,user)=>{setAuthToken(token);Store.set(AUTH_KEY,token);setMe(user.id);setMeId(user.id);Store.set(ACCOUNT_KEY,user.id);setProfile(profileFromUser(user));setAuthed(true);await hydrateFromServer();};
-  const signOut=async()=>{await api.logout();setAuthToken(null);Store.set(AUTH_KEY,null);setAuthed(false);setShowSettings(false);setEditProfile(false);};
+  const signOut=async()=>{
+    await api.logout();
+    setAuthToken(null);Store.set(AUTH_KEY,null);setAuthed(false);
+    hydrated.current=false;
+    // tear down every per-account view + cache so nothing carries into the next sign-in
+    setShowSettings(false);setEditProfile(false);setShowNotifs(false);setShowSearch(false);setShowAccounts(false);
+    setOpenMember(null);setDetailGoalId(null);setMentorView(null);setSheet(null);
+    cohortStore.clear();api.clear();
+    for(const k in USER_CACHE)delete USER_CACHE[k];
+    setSubscribed([]);setGoals([]);setFeed([]);setFriendFeed([]);setFriends([]);
+    setNotifications([]);setFriendReqs({incoming:[],outgoing:[]});setWall({});
+    setMemberGoals({});setMemberWeek({});setMemberHist({});setNudged({});
+    setCohortRev((v)=>v+1);
+  };
   const openNotifs=()=>{setShowSettings(false);setEditProfile(false);setShowSearch(false);setOpenMember(null);setDetailGoalId(null);setShowNotifs(true);};
   const markAllNotifs=()=>{setNotifications((ns)=>ns.map((n)=>({...n,read:true})));api.markAllNotifRead();};
   const dismissNotif=(id)=>setNotifications((ns)=>ns.filter((n)=>n.id!==id));
@@ -2257,6 +2318,14 @@ export default function App(){
   useEffect(()=>{setSessionExpiredHandler(()=>{setAuthToken(null);Store.set(AUTH_KEY,null);setAuthed(false);setToast("Your session expired — please sign in again.");});return ()=>setSessionExpiredHandler(null);},[]);
   useEffect(()=>{let live=true;Store.get(COHORT_EXPAND_KEY).then((v)=>{if(live&&v&&typeof v==="object")setCohortExpanded(v);});return ()=>{live=false;};},[]);
   useEffect(()=>{applyWeekStart(settings.weekStart==="mon");setGoals((gs)=>gs.map((g)=>g.log?deriveGoal(g):g));setSelectedIso((cur)=>WEEK_ISO.indexOf(cur)>=0||cur===TODAY_ISO?cur:TODAY_ISO);setCohortRev((v)=>v+1);},[settings.weekStart]);
+  useEffect(()=>{
+    if(!settings.server.on||!authed)return;
+    const tick=()=>{if(typeof document==="undefined"||!document.hidden){if(refreshRef.current)refreshRef.current();}};
+    const iv=setInterval(tick,25000);            // gentle poll while the app is open
+    window.addEventListener("focus",tick);        // and immediately when you return to it
+    document.addEventListener("visibilitychange",tick);
+    return ()=>{clearInterval(iv);window.removeEventListener("focus",tick);document.removeEventListener("visibilitychange",tick);};
+  },[settings.server.on,authed]);
   useEffect(()=>{
     if(!booted||recapCheckedRef.current||showOnboarding||goals.length===0||(settings.server.on&&!authed))return;
     recapCheckedRef.current=true;
@@ -2346,7 +2415,7 @@ export default function App(){
   const joinCohort=(id)=>{setSubscribed((s)=>s.includes(id)?s:[...s,id]);remote.joinCohort(id);setSheet(null);};
   const joinByCode=async(code)=>{
     const c=String(code||"").trim();if(!c)return "Enter an invite code.";
-    if(API_BASE){try{const r=await api.joinByCode(c);await hydrateFromServer();setSubscribed((s)=>r.cohortId&&!s.includes(r.cohortId)?[...s,r.cohortId]:s);setSheet(null);return null;}catch(e){return e.message;}}
+    if(API_BASE){try{const r=await api.joinByCode(c);await hydrateFromServer();setSubscribed((s)=>r.cohortId&&!s.includes(r.cohortId)?[...s,r.cohortId]:s);setSheet(null);return null;}catch(e){const m=(e.message||"").toLowerCase();if(m.includes("invalid"))return "That code didn't match any cohort. Double-check it and try again.";if(m.includes("already"))return "You're already in that cohort.";return e.message||"Couldn't join — please try again.";}}
     const id=cohortByCode(c);if(!id)return "No cohort matches that code.";if(subscribed.includes(id))return "You're already in that cohort.";joinCohort(id);return null;
   };
   const leaveCohort=(id)=>{
@@ -2437,7 +2506,7 @@ export default function App(){
         {settings.server.on&&dataState==="loading"&&(
           <div className="px-4 py-2 flex items-center gap-2" style={{background:PINE_SOFT,borderBottom:`1px solid ${MINT_BORDER}`}}>
             <span className="czspin" style={{width:13,height:13,border:`2px solid ${PINE}`,borderTopColor:"transparent",borderRadius:"50%",display:"inline-block"}}/>
-            <span style={{fontSize:12.5,color:PINE_DEEP,fontWeight:600}}>Connecting to your server…</span>
+            <span style={{fontSize:12.5,color:PINE_DEEP,fontWeight:600}}>{waking?"Waking up the server… this can take up to a minute the first time.":"Connecting to your server…"}</span>
           </div>
         )}
         {settings.server.on&&dataState==="error"&&(
@@ -2454,7 +2523,7 @@ export default function App(){
           :showNotifs?<NotificationsScreen items={notifications.filter((n)=>(n.minsAgo||0)<NOTIF_MAX_AGE)} requests={friendReqs.incoming} onAccept={acceptReq} onDecline={declineReq} onOpenMember={(id)=>{closeNotifs();setOpenMember(id);}} onBack={closeNotifs} onMarkAll={markAllNotifs} onDismiss={dismissNotif}/>
           :editProfile?<ProfileEditScreen profile={profile} onSave={async(p)=>{try{const saved=await api.patchProfile(p);setProfile((cur)=>(API_BASE&&saved)?{...cur,name:saved.name??p.name,username:saved.username??p.username,avatar:saved.avatar!==undefined?saved.avatar:p.avatar,bio:saved.bio??p.bio,nameChangesLeft:saved.nameChangesLeft??p.nameChangesLeft}:p);setEditProfile(false);}catch(e){setToast(e.message);}}} onBack={()=>setEditProfile(false)}/>
             :showSettings?<SettingsScreen settings={settings} onChange={setSettings} subscribed={subscribed} onLeave={leaveCohort} onJoinOpen={()=>setSheet({kind:"join"})} onReset={resetDemo} onBack={()=>setShowSettings(false)} profile={profile} onEditProfile={()=>setEditProfile(true)} onSwitchAccount={()=>{if(settings.server.on){signOut();}else{setShowAccounts(true);}}} onSignOut={signOut} onReplayIntro={()=>{setShowSettings(false);setShowOnboarding(true);}} serverStatus={serverStatus} onServerChange={applyServer} onTestConnection={()=>{setServerStatus(null);api.health().then(setServerStatus);}} onDeleteAccount={deleteAccount} onShowRecovery={showRecovery} onTogglePush={togglePush}/>
-            :showSearch?<SearchScreen onBack={()=>setShowSearch(false)} onOpenMember={(id)=>{setShowSearch(false);setOpenMember(id);}} subscribed={subscribed} profile={profile} friends={friends} statusOf={friendStatus} onToggleFriend={toggleFriend}/>
+            :showSearch?<SearchScreen onBack={()=>setShowSearch(false)} onOpenMember={(id)=>{setShowSearch(false);setOpenMember(id);}} subscribed={subscribed} profile={profile} friends={friends} statusOf={friendStatus} onToggleFriend={toggleFriend} requests={friendReqs.incoming} onAccept={acceptReq} onDecline={declineReq}/>
             :openMember?<ProfileScreen memberId={openMember} wall={wall} onBack={()=>setOpenMember(null)} onEncourage={encourage} onDeleteNote={deleteNote} profile={profile} onEditProfile={()=>setEditProfile(true)} statusOf={friendStatus} onToggleFriend={toggleFriend} sharedGoals={memberGoals[openMember]} weekData={memberWeek[openMember]} historyData={memberHist[openMember]}/>
             :detailGoal?<GoalDetailScreen goal={detailGoal} onBack={()=>setDetailGoalId(null)} onSetValue={setValue} onToggle={toggle} onEditVis={(id)=>setSheet({kind:"vis",goalId:id})} onEdit={(id)=>setSheet({kind:"edit",goalId:id})} onDelete={(id)=>setConfirmDelete(id)} canManage={detailGoal.category==="personal"||isMentorOfCohort(detailGoal.cohortId)}/>
             :mentorView?(mentorView.kind==="mentee"?<MentorMenteeScreen data={mentorView.data} loading={mentorView.loading} cohortName={COHORTS[mentorView.cohortId]?COHORTS[mentorView.cohortId].name:""} onBack={closeMentorView} onOpenGoal={(gid)=>openGoalHistory(mentorView.cohortId,mentorView.id,gid)}/>:mentorView.kind==="goal"?<MentorGoalScreen data={mentorView.data} loading={mentorView.loading} cohortName={COHORTS[mentorView.cohortId]?COHORTS[mentorView.cohortId].name:""} onBack={closeMentorView} onOpenMentee={(mid)=>openMenteeView(mentorView.cohortId,mid)}/>:<MentorGoalHistoryScreen data={mentorView.data} loading={mentorView.loading} onBack={()=>openMenteeView(mentorView.cohortId,mentorView.memberId)}/>)
