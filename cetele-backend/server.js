@@ -600,7 +600,7 @@ app.post("/api/cohorts", requireAuth, createLimiter, (req, res) => {
   const id = "c_" + Date.now().toString(36);
   const theme = cleanText(req.body.theme, 16) || "pine";
   const description = cleanText(req.body.description, 60, true);
-  const base = name.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "COHORT";
+  const base = name.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5) || "COHORT";
   const inviteCode = `${base}-${100 + ([...id].reduce((a, ch) => a + ch.charCodeAt(0), 0) % 900)}`;
   db.prepare("INSERT INTO cohorts (id,name,full_name,description,theme,invite_code,marks,target) VALUES (?,?,?,?,?,?,0,7)")
     .run(id, name, fullName, description, theme, inviteCode);
@@ -925,7 +925,7 @@ app.post("/api/cohorts/:id/invite/regenerate", requireAuth, (req, res) => {
   if (!role || role.role !== "mentor") return res.status(403).json({ error: "only a mentor can regenerate the invite code" });
   const c = db.prepare("SELECT name FROM cohorts WHERE id = ?").get(cid);
   if (!c) return res.status(404).json({ error: "cohort not found" });
-  const base = (c.name || "COHORT").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "COHORT";
+  const base = (c.name || "COHORT").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5) || "COHORT";
   const code = `${base}-${100 + Math.floor(Math.random() * 900)}`;
   db.prepare("UPDATE cohorts SET invite_code = ? WHERE id = ?").run(code, cid);
   res.json({ inviteCode: code });

@@ -88,6 +88,7 @@ const themeOf=(cohortId)=>THEMES[(COHORTS[cohortId]&&COHORTS[cohortId].theme)||"
 const memberById=(id)=>{
   for(const cid of Object.keys(COHORTS)){const m=COHORTS[cid].members.find((x)=>x.id===id);if(m)return m;}
   const u=(typeof USER_BY_ID!=="undefined")&&USER_BY_ID[id];if(u)return {id,name:u.name,role:"mentee"};
+  const c=(typeof USER_CACHE!=="undefined")&&USER_CACHE[id];if(c)return {id,name:c.name||("@"+(c.username||"")),role:"mentee"};
   return {id,name:"Someone",role:"mentee"};
 };
 const dispName=(id,profile)=>id===ME?profile.name:(memberById(id)?.name||"Someone");
@@ -261,10 +262,12 @@ const seedLogFor=(g)=>{const log={};const v=g.type==="binary"?1:(g.dailyMin+g.st
 const SEED_GOALS_PD=normalizeGoals(SEED_GOALS.map((g)=>({...g,Icon:iconOf(g.icon),log:seedLogFor(g)})));
 
 /* optional persistence: artifact storage if available, else in-memory only */
-const STORE_OK=typeof window!=="undefined"&&window.storage&&typeof window.storage.get==="function";
-const Store={
-  async get(k){if(!STORE_OK)return null;try{const r=await window.storage.get(k);return r&&r.value?JSON.parse(r.value):null;}catch{return null;}},
-  async set(k,v){if(!STORE_OK)return;try{await window.storage.set(k,JSON.stringify(v));}catch{}},
+const HAS_LS=(()=>{try{if(typeof window==="undefined"||!window.localStorage)return false;window.localStorage.setItem("__cz","1");window.localStorage.removeItem("__cz");return true;}catch{return false;}})();
+const HAS_WS=typeof window!=="undefined"&&window.storage&&typeof window.storage.get==="function";
+const _mem={};
+const Store={  // real websites use localStorage; the artifact preview uses window.storage; otherwise in-memory
+  async get(k){try{if(HAS_LS){const r=window.localStorage.getItem(k);return r?JSON.parse(r):null;}if(HAS_WS){const r=await window.storage.get(k);return r&&r.value?JSON.parse(r.value):null;}return k in _mem?_mem[k]:null;}catch{return null;}},
+  async set(k,v){try{if(HAS_LS){window.localStorage.setItem(k,JSON.stringify(v));return;}if(HAS_WS){await window.storage.set(k,JSON.stringify(v));return;}_mem[k]=v;}catch{}},
 };
 const GOALS_KEY="cetele:goals:v3";
 const goalsKey=()=>`${GOALS_KEY}:${ME}`;   // goals are stored per account
@@ -432,7 +435,7 @@ const cohortStore={
 /* server-sync layer — no-ops when API_BASE is null (the in-browser demo);
    when pointed at the Node backend it round-trips every mutation. */
 const remote={
-  createCohort(spec){if(!API_BASE)return;apiFetch(`${API_BASE}/api/cohorts`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...spec,ownerId:ME})}).catch(()=>{});},
+  async createCohort(spec){if(!API_BASE)return null;try{const r=await apiFetch(`${API_BASE}/api/cohorts`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...spec,ownerId:ME})});if(!r.ok)return null;return await r.json();}catch{return null;}},
   updateCohort(id,patch){if(!API_BASE)return;apiFetch(`${API_BASE}/api/cohorts/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(patch)}).catch(()=>{});},
   setRole(id,uid,role){if(!API_BASE)return;apiFetch(`${API_BASE}/api/cohorts/${id}/members/${uid}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({role})}).catch(()=>{});},
   removeMember(id,uid){if(!API_BASE)return;apiFetch(`${API_BASE}/api/cohorts/${id}/members/${uid}`,{method:"DELETE"}).catch(()=>{});},
@@ -753,13 +756,14 @@ function CeteleScreen({goals,subscribed,onSetValue,onToggle,onEditVis,onEdit,onD
 }
 
 /* ---------- Feed ---------- */
-function FeedScreen({feed,friendFeed,friends,subscribed,onCheer,onOpenMember,onOpenSearch,marksToday,profile,feedMore,loadingMore,onLoadMore}){
+function FeedScreen({feed,friendFeed,friends,subscribed,onCheer,onOpenMember,onOpenSearch,onJoinOpen,onCreateOpen,marksToday,profile,feedMore,loadingMore,onLoadMore}){
   const [scope,setScope]=useState("cohort");
   const heroId=subscribed.includes("sunrise")?"sunrise":subscribed[0];const hero=COHORTS[heroId];
   const items=scope==="cohort"?feed:friendFeed.filter((it)=>friends.includes(it.who));
   return (
     <div className="px-4 pt-3 pb-28">
       {scope==="cohort"?(
+        hero?(
         <div className="rounded-3xl p-5 mb-4 text-white relative overflow-hidden" style={{background:`linear-gradient(140deg, ${PINE_DEEP}, ${PINE})`}}>
           <div className="absolute -right-6 -top-8 opacity-20"><Sparkles size={120}/></div>
           <p className="font-medium" style={{fontSize:13,opacity:0.85}}>{hero.fullName} · today</p>
@@ -767,6 +771,12 @@ function FeedScreen({feed,friendFeed,friends,subscribed,onCheer,onOpenMember,onO
           <div className="mt-3"><TallyMarks count={marksToday} color="#a7f3d0"/></div>
           <div className="flex -space-x-2 mt-4">{hero.members.map((m)=><div key={m.id} style={{boxShadow:`0 0 0 2px ${PINE_DEEP}`,borderRadius:99}}><Avatar name={dispName(m.id,profile)} pfp={dispPfp(m.id,profile)} size={30}/></div>)}<span className="ml-3 self-center" style={{fontSize:12,opacity:0.9}}>{hero.members.length} keeping each other going</span></div>
         </div>
+        ):(
+        <div className="rounded-3xl p-5 mb-4 flex items-center justify-between" style={{background:CARD,border:`1px solid ${BORDER}`}}>
+          <div><p style={{fontFamily:FD,fontSize:22,fontWeight:600,color:INK,letterSpacing:-0.5}}>Your cohorts</p><p style={{fontSize:13,color:INK3,marginTop:1}}>Not in a cohort yet</p></div>
+          <button onClick={onJoinOpen} className="inline-flex items-center gap-1.5 rounded-full font-semibold" style={{color:PINE_DEEP,background:PINE_SOFT,fontSize:13,padding:"7px 13px"}}><Compass size={15}/> Join</button>
+        </div>
+        )
       ):(
         <div className="rounded-3xl p-5 mb-4 flex items-center justify-between" style={{background:CARD,border:`1px solid ${BORDER}`}}>
           <div><p style={{fontFamily:FD,fontSize:22,fontWeight:600,color:INK,letterSpacing:-0.5}}>Your friends</p><p style={{fontSize:13,color:INK3,marginTop:1}}>{friends.length} {friends.length===1?"person":"people"} you follow</p></div>
@@ -784,6 +794,14 @@ function FeedScreen({feed,friendFeed,friends,subscribed,onCheer,onOpenMember,onO
             <p className="font-semibold" style={{fontSize:14.5,color:INK}}>No friend activity yet</p>
             <p style={{fontSize:12.5,color:INK3,marginTop:3,marginBottom:14}}>Add people to see their wins here and cheer them on.</p>
             <button onClick={onOpenSearch} className="rounded-full font-semibold px-5 py-2.5" style={{background:PINE,color:"#fff",fontSize:13.5}}>Find people to add</button>
+          </>):subscribed.length===0?(<>
+            <Users size={24} style={{color:INK3}} className="mx-auto mb-2"/>
+            <p className="font-semibold" style={{fontSize:14.5,color:INK}}>No cohort yet</p>
+            <p style={{fontSize:12.5,color:INK3,marginTop:3,marginBottom:14}}>Join or create a cohort to see shared wins here and keep each other going.</p>
+            <div className="flex items-center justify-center gap-2">
+              <button onClick={onJoinOpen} className="rounded-full font-semibold px-5 py-2.5" style={{background:PINE,color:"#fff",fontSize:13.5}}>Join a cohort</button>
+              <button onClick={onCreateOpen} className="rounded-full font-semibold px-5 py-2.5" style={{background:PINE_SOFT,color:PINE_DEEP,fontSize:13.5,border:`1px solid ${MINT_BORDER}`}}>Create one</button>
+            </div>
           </>):(<>
             <Sparkles size={24} style={{color:INK3}} className="mx-auto mb-2"/>
             <p className="font-semibold" style={{fontSize:14.5,color:INK}}>Quiet for now</p>
@@ -969,7 +987,7 @@ function ProfileScreen({memberId,wall,onBack,onEncourage,onDeleteNote,profile,on
           <div className="rounded-2xl p-4" style={{background:CARD,border:`1px solid ${BORDER}`}}>
             <div className="flex mb-4"><StatCell label="Total marks" value={hist.totalMarks}/><div style={{width:1,background:BORDER}}/><StatCell label="Best streak" value={hist.bestStreak}/><div style={{width:1,background:BORDER}}/><StatCell label="Weeks active" value={hist.weeksActive}/></div>
             <p style={{fontSize:12,color:INK3}} className="mb-2">Completion · last 8 weeks</p>
-            <div style={{height:130}}><ResponsiveContainer width="100%" height="100%">
+            <div style={{height:130,width:"100%"}}><ResponsiveContainer width="99%" height={130} minWidth={0}>
               <AreaChart data={hist.weekly} margin={{top:4,right:4,left:-26,bottom:0}}>
                 <defs><linearGradient id="h" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={PINE} stopOpacity={0.3}/><stop offset="100%" stopColor={PINE} stopOpacity={0}/></linearGradient></defs>
                 <CartesianGrid vertical={false} stroke={SUNKEN}/><XAxis dataKey="w" tick={{fontSize:10,fill:INK3}} axisLine={false} tickLine={false}/><YAxis tick={{fontSize:10,fill:INK3}} axisLine={false} tickLine={false} domain={[0,100]}/>
@@ -1133,12 +1151,13 @@ function Seg({options,value,onChange}){
 }
 function JoinSheet({onJoinCode,onClose}){
   const [code,setCode]=useState("");const [err,setErr]=useState("");const [busy,setBusy]=useState(false);
+  const fmt=(raw)=>{const s=(raw||"").toUpperCase().replace(/[^A-Z0-9]/g,"");const letters=s.replace(/[0-9]/g,"").slice(0,5);const digits=s.replace(/[^0-9]/g,"").slice(0,3);return digits?`${letters}-${digits}`:letters;};
   const tryCode=async()=>{if(!code.trim()||busy)return;setBusy(true);setErr("");const e=await onJoinCode(code.trim());setBusy(false);if(e)setErr(e);};
   return (
     <Sheet title="Join a cohort" onClose={onClose}>
       <label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Invite code</label>
       <div className="flex gap-2 mt-1.5 mb-1">
-        <input value={code} maxLength={32} onChange={(e)=>{setCode(e.target.value.slice(0,32));if(err)setErr("");}} onKeyDown={(e)=>{if(e.key==="Enter")tryCode();}} placeholder="e.g. COHORT-123" className="flex-1 rounded-xl px-3.5 outline-none" style={{height:46,border:`1px solid ${err?CHEER:BORDER2}`,fontSize:14,color:INK,background:"#fff",letterSpacing:0.5}}/>
+        <input value={code} maxLength={9} onChange={(e)=>{setCode(fmt(e.target.value));if(err)setErr("");}} onKeyDown={(e)=>{if(e.key==="Enter")tryCode();}} placeholder="e.g. SUNNY-123" className="flex-1 rounded-xl px-3.5 outline-none" style={{height:46,border:`1px solid ${err?CHEER:BORDER2}`,fontSize:15,color:INK,background:"#fff",letterSpacing:1,fontFamily:FD}}/>
         <button disabled={!code.trim()||busy} onClick={tryCode} className="rounded-xl font-semibold px-5" style={{height:46,background:code.trim()&&!busy?PINE:SUNKEN,color:code.trim()&&!busy?"#fff":INK3,fontSize:14}}>{busy?"…":"Join"}</button>
       </div>
       <p style={{fontSize:12,color:err?CHEER:INK3,marginBottom:18,minHeight:16}}>{err||"Ask a mentor for their cohort's invite code."}</p>
@@ -1225,7 +1244,7 @@ function CohortSettingsSheet({cohortId,onClose,onSave,onSetRole,onRemoveMember,o
           </div>);})}
       </div>
 
-      <button onClick={()=>onArchive(cohortId)} className="w-full rounded-2xl py-3 font-semibold inline-flex items-center justify-center gap-2" style={{border:`1px solid ${BORDER2}`,background:CARD,color:CHEER,fontSize:14}}><Archive size={16}/> Archive cohort</button>
+      <button onClick={()=>onArchive(cohortId)} className="w-full rounded-2xl py-3 font-semibold inline-flex items-center justify-center gap-2" style={{border:`1px solid ${BORDER2}`,background:CARD,color:CHEER,fontSize:14}}><Archive size={16}/> Delete cohort</button>
       <p style={{fontSize:11.5,color:INK3,textAlign:"center",marginTop:8}}>Removes it from your cohorts. You can rejoin with the code.</p>
     </Sheet>
   );
@@ -1436,7 +1455,7 @@ function SettingsScreen({settings,onChange,subscribed,onLeave,onJoinOpen,onReset
 
       <div className="flex flex-col items-center text-center pt-2">
         <div className="flex items-center justify-center rounded-2xl mb-2.5" style={{width:44,height:44,background:PINE}}><TallyMarks count={4} color="#a7f3d0" scale={0.7}/></div>
-        <div style={{fontFamily:FD,fontSize:16,fontWeight:600,color:INK}}>Çetele 1.2.0</div>
+        <div style={{fontFamily:FD,fontSize:16,fontWeight:600,color:INK}}>Çetele 1.2.1</div>
         <p style={{fontSize:12,color:INK3,marginTop:2}}>Made for cohorts who keep each other going.</p>
         <div className="flex items-center gap-3 mt-3" style={{fontSize:12,color:INK2}}><span className="inline-flex items-center gap-1">Terms <SoonPill/></span><span style={{color:BORDER2}}>·</span><span className="inline-flex items-center gap-1">Privacy <SoonPill/></span></div>
       </div>
@@ -1696,7 +1715,7 @@ function AuthScreen({serverUrl,onAuthed,onBackToDemo}){
         {!reset&&<button onClick={()=>{setErr("");setMode(signup?"signin":"signup");}} className="w-full mt-3 font-semibold" style={{fontSize:13.5,color:PINE_DEEP}}>{signup?"Have an account? Sign in":"New here? Create an account"}</button>}
         {!signup&&!reset&&<button onClick={()=>{setErr("");setMode("reset");}} className="w-full mt-2 font-medium" style={{fontSize:12.5,color:INK3}}>Forgot password?</button>}
         {reset&&<button onClick={()=>{setErr("");setMode("signin");}} className="w-full mt-3 font-semibold" style={{fontSize:13.5,color:PINE_DEEP}}>Back to sign in</button>}
-        <div className="mt-5 rounded-xl p-3 flex items-start gap-2" style={{background:SUNKEN}}><Database size={15} style={{color:INK2,marginTop:1}}/><p style={{fontSize:11.5,color:INK2,lineHeight:1.5}}>Connected to <b style={{color:INK}}>{serverUrl||"your server"}</b>. Seeded demo accounts (e.g. <b style={{color:INK}}>@murat</b>) sign in with password <b style={{color:INK}}>cetele</b>.</p></div>
+        <div className="mt-5 rounded-xl p-3 flex items-start gap-2" style={{background:SUNKEN}}><Database size={15} style={{color:INK2,marginTop:1}}/><p style={{fontSize:11.5,color:INK2,lineHeight:1.5}}>Connected to <b style={{color:INK}}>{serverUrl||"your server"}</b>.</p></div>
         <button onClick={onBackToDemo} className="w-full mt-3 font-medium" style={{fontSize:12.5,color:INK3}}>← Back to demo (no server)</button>
       </div>
     </div>
@@ -1737,7 +1756,7 @@ function Onboarding({onDone}){
 }
 
 /* ---------- notifications inbox ---------- */
-function NotificationsScreen({items,requests=[],onAccept,onDecline,onOpenMember,onBack,onMarkAll}){
+function NotificationsScreen({items,requests=[],onAccept,onDecline,onOpenMember,onBack,onMarkAll,onDismiss}){
   const ago=(m)=>m<1?"now":m<60?`${m}m`:m<1440?`${Math.floor(m/60)}h`:`${Math.floor(m/1440)}d`;
   const anyUnread=items.some((n)=>!n.read);
   const empty=items.length===0&&requests.length===0;
@@ -1777,6 +1796,7 @@ function NotificationsScreen({items,requests=[],onAccept,onDecline,onOpenMember,
                 <p style={{fontSize:11.5,color:INK3,marginTop:2}}>{ago(n.minsAgo||0)} ago</p>
               </div>
               {!n.read&&<span className="rounded-full shrink-0" style={{width:8,height:8,background:meta.tint,marginTop:6}}/>}
+              {onDismiss&&<button onClick={()=>onDismiss(n.id)} aria-label="Dismiss" className="shrink-0 flex items-center justify-center rounded-full" style={{width:26,height:26,background:SUNKEN,color:INK3,marginTop:-1}}><X size={14}/></button>}
             </div>);})}
         </div>
       )}
@@ -2107,7 +2127,7 @@ export default function App(){
   const [showOnboarding,setShowOnboarding]=useState(false);
   const [notifications,setNotifications]=useState([]);
   const [showNotifs,setShowNotifs]=useState(false);
-  const unreadNotifs=notifications.filter((n)=>!n.read).length;
+  const unreadNotifs=notifications.filter((n)=>!n.read&&(n.minsAgo||0)<7*1440).length;
   const [editProfile,setEditProfile]=useState(false);
   const [friends,setFriends]=useState(DB_FRIENDS_ME);
   const [friendReqs,setFriendReqs]=useState(SEED_FRIEND_REQS);
@@ -2197,6 +2217,8 @@ export default function App(){
   const signOut=async()=>{await api.logout();setAuthToken(null);Store.set(AUTH_KEY,null);setAuthed(false);setShowSettings(false);setEditProfile(false);};
   const openNotifs=()=>{setShowSettings(false);setEditProfile(false);setShowSearch(false);setOpenMember(null);setDetailGoalId(null);setShowNotifs(true);};
   const markAllNotifs=()=>{setNotifications((ns)=>ns.map((n)=>({...n,read:true})));api.markAllNotifRead();};
+  const dismissNotif=(id)=>setNotifications((ns)=>ns.filter((n)=>n.id!==id));
+  const NOTIF_MAX_AGE=7*1440; // auto-hide notifications older than 7 days
   const closeNotifs=()=>{setShowNotifs(false);if(notifications.some((n)=>!n.read)){markAllNotifs();}};
   const applyServer=(server)=>{setSettings((s)=>({...s,server}));Store.set(SERVER_KEY,server);setApiBase(server.on?server.url:null);if(server.on){enterServer();}else{setServerStatus(null);setAuthed(false);hydrateLocal();}};
   const retryServer=()=>{if(settings.server.on)enterServer();};
@@ -2236,7 +2258,7 @@ export default function App(){
   useEffect(()=>{let live=true;Store.get(COHORT_EXPAND_KEY).then((v)=>{if(live&&v&&typeof v==="object")setCohortExpanded(v);});return ()=>{live=false;};},[]);
   useEffect(()=>{applyWeekStart(settings.weekStart==="mon");setGoals((gs)=>gs.map((g)=>g.log?deriveGoal(g):g));setSelectedIso((cur)=>WEEK_ISO.indexOf(cur)>=0||cur===TODAY_ISO?cur:TODAY_ISO);setCohortRev((v)=>v+1);},[settings.weekStart]);
   useEffect(()=>{
-    if(!booted||recapCheckedRef.current||showOnboarding||goals.length===0)return;
+    if(!booted||recapCheckedRef.current||showOnboarding||goals.length===0||(settings.server.on&&!authed))return;
     recapCheckedRef.current=true;
     (async()=>{
       const shown=await Store.get(RECAP_KEY);
@@ -2332,11 +2354,17 @@ export default function App(){
     if(!API_BASE&&COHORTS[id]){COHORTS[id].members=COHORTS[id].members.filter((m)=>m.id!==ME);if(COHORTS[id].members.length===0){delete COHORTS[id];}setCohortRev((v)=>v+1);}
     remote.leaveCohort(id);
   };
-  const createCohort=({name,fullName,theme,description})=>{
+  const createCohort=async({name,fullName,theme,description})=>{
+    if(API_BASE){
+      const r=await remote.createCohort({name,fullName,theme,description:description||""});
+      setSheet(null);
+      if(r&&r.id){await hydrateFromServer();setSubscribed((s)=>s.includes(r.id)?s:[...s,r.id]);setCohortRev((v)=>v+1);setTab("cohort");}
+      else{setToast("Couldn't create the cohort — please try again.");}
+      return;
+    }
     const id="c_"+Date.now().toString(36);
     COHORTS[id]={id,name,fullName,theme,description:description||"",marks:0,target:7,members:[{id:ME,name:profile.name,role:"mentor",weekPct:0,streak:0,loggedToday:true,trend:0}]};
     setSubscribed((s)=>[...s,id]);setCohortRev((v)=>v+1);setSheet(null);setTab("cohort");
-    remote.createCohort({name,fullName,theme,description:description||""});
   };
   const updateCohort=(id,{name,fullName,theme,description})=>{
     if(COHORTS[id]){COHORTS[id]={...COHORTS[id],name,fullName,theme,description};}
@@ -2371,6 +2399,7 @@ export default function App(){
   const tabs=[{id:"feed",label:"Feed",icon:Home},{id:"cetele",label:"Çetele",icon:Sparkles},{id:"cohort",label:"Cohort",icon:Users},...(mentoredSubscribed.length?[{id:"mentor",label:"Mentor",icon:GraduationCap}]:[]),{id:"insights",label:"Insights",icon:BarChart3}];
   const safeTab=tabs.some((t)=>t.id===tab)?tab:"cetele";
   const noCohorts=subscribed.length===0;
+  const onAuthScreen=settings.server.on&&!authed;   // sign-in takeover: hide chrome + first-run/recap overlays
   const visGoal=sheet&&sheet.kind==="vis"?goals.find((g)=>g.id===sheet.goalId):null;
   const editGoalObj=sheet&&sheet.kind==="edit"?goals.find((g)=>g.id===sheet.goalId):null;
   const nudgeMember=sheet&&sheet.kind==="nudge"?memberById(sheet.memberId):null;
@@ -2395,7 +2424,7 @@ export default function App(){
         .cz-reduce .czsheet,.cz-reduce .czpop,.cz-reduce .czspin,.cz-reduce .czshim{animation:none}.cz-reduce button:active{transform:none}`}</style>
 
       <div lang="en" data-rev={cohortRev} className={"cz w-full flex flex-col"+(settings.reduceMotion?" cz-reduce":"")} style={{maxWidth:430,background:CANVAS,minHeight:"100vh"}}>
-        <header className="sticky top-0 px-4 py-3 flex items-center justify-between" style={{zIndex:60,background:"#faf9f7e6",backdropFilter:"blur(8px)",borderBottom:`1px solid ${BORDER}`}}>
+        {!onAuthScreen&&<header className="sticky top-0 px-4 py-3 flex items-center justify-between" style={{zIndex:60,background:"#faf9f7e6",backdropFilter:"blur(8px)",borderBottom:`1px solid ${BORDER}`}}>
           <button onClick={()=>{setShowSettings(false);setEditProfile(false);setShowSearch(false);setShowNotifs(false);setOpenMember(null);setDetailGoalId(null);setMentorView(null);}} aria-label="Home" className="flex items-center gap-2"><div className="flex items-center justify-center rounded-xl" style={{width:32,height:32,background:PINE}}><TallyMarks count={4} color="#a7f3d0" scale={0.6}/></div><span style={{fontFamily:FD,fontWeight:600,fontSize:22,color:INK,letterSpacing:-0.5}}>Çetele</span></button>
           <div className="flex items-center gap-1.5">
             <button onClick={openNotifs} aria-label="Notifications" className="flex items-center justify-center rounded-full" style={{position:"relative",width:34,height:34,color:showNotifs?PINE:INK2,background:showNotifs?PINE_SOFT:"transparent"}}><Bell size={20}/>{inboxCount>0&&<span className="flex items-center justify-center rounded-full" style={{position:"absolute",top:2,right:2,minWidth:15,height:15,padding:"0 3px",background:CHEER,color:"#fff",fontSize:9,fontWeight:800,lineHeight:1}}>{inboxCount>9?"9+":inboxCount}</span>}</button>
@@ -2403,7 +2432,7 @@ export default function App(){
             <button onClick={()=>{setOpenMember(null);setEditProfile(false);setShowSearch(false);setDetailGoalId(null);setShowNotifs(false);setShowSettings(true);}} aria-label="Settings" className="flex items-center justify-center rounded-full" style={{width:34,height:34,color:showSettings?PINE:INK2,background:showSettings?PINE_SOFT:"transparent"}}><SettingsIcon size={20}/></button>
             <button onClick={()=>{setShowSettings(false);setEditProfile(false);setShowSearch(false);setDetailGoalId(null);setShowNotifs(false);setOpenMember(ME);}}><Avatar name={profile.name} pfp={profile.avatar} size={34} ring={PINE}/></button>
           </div>
-        </header>
+        </header>}
 
         {settings.server.on&&dataState==="loading"&&(
           <div className="px-4 py-2 flex items-center gap-2" style={{background:PINE_SOFT,borderBottom:`1px solid ${MINT_BORDER}`}}>
@@ -2422,7 +2451,7 @@ export default function App(){
 
         <main className="flex-1 overflow-y-auto">
           {(settings.server.on&&!authed)?<AuthScreen serverUrl={settings.server.url} onAuthed={onAuthed} onBackToDemo={()=>applyServer({...settings.server,on:false})}/>
-          :showNotifs?<NotificationsScreen items={notifications} requests={friendReqs.incoming} onAccept={acceptReq} onDecline={declineReq} onOpenMember={(id)=>{closeNotifs();setOpenMember(id);}} onBack={closeNotifs} onMarkAll={markAllNotifs}/>
+          :showNotifs?<NotificationsScreen items={notifications.filter((n)=>(n.minsAgo||0)<NOTIF_MAX_AGE)} requests={friendReqs.incoming} onAccept={acceptReq} onDecline={declineReq} onOpenMember={(id)=>{closeNotifs();setOpenMember(id);}} onBack={closeNotifs} onMarkAll={markAllNotifs} onDismiss={dismissNotif}/>
           :editProfile?<ProfileEditScreen profile={profile} onSave={async(p)=>{try{const saved=await api.patchProfile(p);setProfile((cur)=>(API_BASE&&saved)?{...cur,name:saved.name??p.name,username:saved.username??p.username,avatar:saved.avatar!==undefined?saved.avatar:p.avatar,bio:saved.bio??p.bio,nameChangesLeft:saved.nameChangesLeft??p.nameChangesLeft}:p);setEditProfile(false);}catch(e){setToast(e.message);}}} onBack={()=>setEditProfile(false)}/>
             :showSettings?<SettingsScreen settings={settings} onChange={setSettings} subscribed={subscribed} onLeave={leaveCohort} onJoinOpen={()=>setSheet({kind:"join"})} onReset={resetDemo} onBack={()=>setShowSettings(false)} profile={profile} onEditProfile={()=>setEditProfile(true)} onSwitchAccount={()=>{if(settings.server.on){signOut();}else{setShowAccounts(true);}}} onSignOut={signOut} onReplayIntro={()=>{setShowSettings(false);setShowOnboarding(true);}} serverStatus={serverStatus} onServerChange={applyServer} onTestConnection={()=>{setServerStatus(null);api.health().then(setServerStatus);}} onDeleteAccount={deleteAccount} onShowRecovery={showRecovery} onTogglePush={togglePush}/>
             :showSearch?<SearchScreen onBack={()=>setShowSearch(false)} onOpenMember={(id)=>{setShowSearch(false);setOpenMember(id);}} subscribed={subscribed} profile={profile} friends={friends} statusOf={friendStatus} onToggleFriend={toggleFriend}/>
@@ -2430,20 +2459,20 @@ export default function App(){
             :detailGoal?<GoalDetailScreen goal={detailGoal} onBack={()=>setDetailGoalId(null)} onSetValue={setValue} onToggle={toggle} onEditVis={(id)=>setSheet({kind:"vis",goalId:id})} onEdit={(id)=>setSheet({kind:"edit",goalId:id})} onDelete={(id)=>setConfirmDelete(id)} canManage={detailGoal.category==="personal"||isMentorOfCohort(detailGoal.cohortId)}/>
             :mentorView?(mentorView.kind==="mentee"?<MentorMenteeScreen data={mentorView.data} loading={mentorView.loading} cohortName={COHORTS[mentorView.cohortId]?COHORTS[mentorView.cohortId].name:""} onBack={closeMentorView} onOpenGoal={(gid)=>openGoalHistory(mentorView.cohortId,mentorView.id,gid)}/>:mentorView.kind==="goal"?<MentorGoalScreen data={mentorView.data} loading={mentorView.loading} cohortName={COHORTS[mentorView.cohortId]?COHORTS[mentorView.cohortId].name:""} onBack={closeMentorView} onOpenMentee={(mid)=>openMenteeView(mentorView.cohortId,mid)}/>:<MentorGoalHistoryScreen data={mentorView.data} loading={mentorView.loading} onBack={()=>openMenteeView(mentorView.cohortId,mentorView.memberId)}/>)
             :(settings.server.on&&dataState==="loading"&&!hydrated.current)?<SkeletonScreen/>
-            :(safeTab==="feed"||safeTab==="cohort")&&noCohorts?<NoCohortsScreen onJoinOpen={()=>setSheet({kind:"join"})} onCreateOpen={safeTab==="cohort"?()=>setSheet({kind:"create"}):undefined}/>
-            :safeTab==="feed"?<FeedScreen feed={feed} friendFeed={friendFeed} friends={friends} subscribed={subscribed} onCheer={cheer} onOpenMember={setOpenMember} onOpenSearch={()=>{setShowSettings(false);setEditProfile(false);setOpenMember(null);setShowSearch(true);}} marksToday={marksToday} profile={profile} feedMore={feedMore} loadingMore={feedLoadingMore} onLoadMore={loadMoreFeed}/>
+            :safeTab==="cohort"&&noCohorts?<NoCohortsScreen onJoinOpen={()=>setSheet({kind:"join"})} onCreateOpen={()=>setSheet({kind:"create"})}/>
+            :safeTab==="feed"?<FeedScreen feed={feed} friendFeed={friendFeed} friends={friends} subscribed={subscribed} onCheer={cheer} onOpenMember={setOpenMember} onOpenSearch={()=>{setShowSettings(false);setEditProfile(false);setOpenMember(null);setShowSearch(true);}} onJoinOpen={()=>setSheet({kind:"join"})} onCreateOpen={()=>setSheet({kind:"create"})} marksToday={marksToday} profile={profile} feedMore={feedMore} loadingMore={feedLoadingMore} onLoadMore={loadMoreFeed}/>
             :safeTab==="cetele"?<CeteleScreen goals={goals} subscribed={subscribed} onSetValue={setValue} onToggle={toggle} onEditVis={(id)=>setSheet({kind:"vis",goalId:id})} onEdit={(id)=>setSheet({kind:"edit",goalId:id})} onDelete={(id)=>setConfirmDelete(id)} onAdd={()=>setSheet({kind:"add"})} onOpenGoal={(id)=>setDetailGoalId(id)} selectedIso={selectedIso} setSelectedIso={setSelectedIso} cohortExpanded={cohortExpanded} onToggleCohort={toggleCohortExpand}/>
             :safeTab==="cohort"?<CohortScreen subscribed={subscribed} onOpenMember={setOpenMember} onJoinOpen={()=>setSheet({kind:"join"})} onCreateOpen={()=>setSheet({kind:"create"})} onSettingsOpen={(id)=>setSheet({kind:"cohortSettings",id})} onLeave={(id)=>setConfirmLeave(id)} profile={profile}/>
             :safeTab==="mentor"?<MentorScreen cohorts={mentoredSubscribed} goals={goals} onOpenMentee={openMenteeView} onOpenGoal={openGoalView} onAddGoal={(cid)=>setSheet({kind:"add",preset:{category:"cohort",cohortId:cid}})} onNudge={(id)=>setSheet({kind:"nudge",memberId:id})} nudged={nudged}/>
             :<InsightsScreen goals={goals} subscribed={subscribed}/>}
         </main>
 
-        <nav className="sticky bottom-0 flex items-stretch" style={{zIndex:60,background:"#fffffff2",backdropFilter:"blur(8px)",borderTop:`1px solid ${BORDER}`}}>
+        {!onAuthScreen&&<nav className="sticky bottom-0 flex items-stretch" style={{zIndex:60,background:"#fffffff2",backdropFilter:"blur(8px)",borderTop:`1px solid ${BORDER}`}}>
           {tabs.map((t)=>{const active=!openMember&&!showSettings&&!editProfile&&!showSearch&&!showNotifs&&!detailGoal&&!mentorView&&safeTab===t.id;const Icon=t.icon;return(
             <button key={t.id} onClick={()=>{setOpenMember(null);setShowSettings(false);setEditProfile(false);setShowSearch(false);setShowNotifs(false);setDetailGoalId(null);setMentorView(null);setTab(t.id);}} className="flex-1 flex flex-col items-center gap-0.5 py-2.5" style={{color:active?PINE:INK3}}>
               <Icon size={21} strokeWidth={active?2.4:2}/><span style={{fontSize:10.5,fontWeight:active?700:500}}>{t.label}</span>
             </button>);})}
-        </nav>
+        </nav>}
       </div>
 
       {sheet&&sheet.kind==="add"&&<GoalSheet mode="add" preset={sheet.preset} defaultVis={settings.defaultVis} friends={friends} onClose={()=>setSheet(null)} onSave={addGoal}/>}
@@ -2454,12 +2483,12 @@ export default function App(){
       {sheet&&sheet.kind==="create"&&<CreateCohortSheet onClose={()=>setSheet(null)} onCreate={createCohort}/>}
       {sheet&&sheet.kind==="cohortSettings"&&<CohortSettingsSheet cohortId={sheet.id} onClose={()=>setSheet(null)} onSave={updateCohort} onSetRole={setMemberRole} onRemoveMember={removeMember} onArchive={(id)=>setConfirmArchive(id)} onRegenerate={regenerateInvite} profile={profile}/>}
       {showAccounts&&<AccountPicker current={meId} onPick={switchAccount} onClose={()=>setShowAccounts(false)}/>}
-      {showOnboarding&&<Onboarding onDone={finishOnboarding}/>}
+      {showOnboarding&&!onAuthScreen&&<Onboarding onDone={finishOnboarding}/>}
       {recoveryView&&<div className="fixed inset-0 flex justify-center" style={{zIndex:95,background:CANVAS,overflowY:"auto"}}><div className="w-full" style={{maxWidth:430}}><RecoveryPanel code={recoveryView} context="view" onContinue={()=>setRecoveryView(null)}/></div></div>}
-      {recap&&<RecapScreen stats={recap} onClose={()=>setRecap(null)}/>}
+      {recap&&!onAuthScreen&&<RecapScreen stats={recap} onClose={()=>setRecap(null)}/>}
       {celebration&&<CelebrationScreen title={celebration.title} streak={celebration.streak} onClose={()=>setCelebration(null)}/>}
       {toast&&<div className="fixed left-0 right-0 flex justify-center px-4" style={{bottom:96,zIndex:80,pointerEvents:"none"}}><div className="rounded-full px-4 py-2.5 flex items-center gap-2" style={{background:INK,color:"#fff",fontSize:13,fontWeight:600,maxWidth:360,boxShadow:E2}}><AlertCircle size={15} style={{color:"#fca5a5"}}/>{toast}</div></div>}
-      {confirmArchive&&<ConfirmDialog title="Archive this cohort?" body="It's removed from your cohorts. You can rejoin later with its invite code." confirmLabel="Archive" danger onCancel={()=>setConfirmArchive(null)} onConfirm={()=>archiveCohort(confirmArchive)}/>}
+      {confirmArchive&&<ConfirmDialog title="Delete this cohort?" body="This permanently removes the cohort and its shared goals for every member. This can't be undone." confirmLabel="Delete" danger onCancel={()=>setConfirmArchive(null)} onConfirm={()=>archiveCohort(confirmArchive)}/>}
       {confirmLeave&&(()=>{const c=COHORTS[confirmLeave];const last=c&&c.members&&c.members.length<=1;return <ConfirmDialog title={`Leave ${c?c.name:"cohort"}?`} body={last?"You're the last member, so this cohort and its shared goals will be permanently deleted. This can't be undone.":"You'll stop seeing its shared goals and standings. You can rejoin later with the invite code."} confirmLabel={last?"Leave & delete":"Leave"} danger onCancel={()=>setConfirmLeave(null)} onConfirm={()=>{leaveCohort(confirmLeave);setConfirmLeave(null);}}/>;})()}
       {confirmDelete&&<ConfirmDialog title="Delete this goal?" body="Its weekly history and streak will be removed. This can't be undone." confirmLabel="Delete" danger onCancel={()=>setConfirmDelete(null)} onConfirm={()=>{deleteGoal(confirmDelete);setConfirmDelete(null);setDetailGoalId(null);}}/>}
     </div>
