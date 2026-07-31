@@ -143,14 +143,19 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_push_user ON push_subscriptions(user_id);
 `);
 
-// --- web push (Web Push API / VAPID). Optional: enabled when `web-push` is installed. ---
-// For local/self-distribution these keys are fine inline; for a real deployment set
-// VAPID_PUBLIC / VAPID_PRIVATE env vars (and rotate these) instead.
-const VAPID_PUBLIC = process.env.VAPID_PUBLIC || "BCBLFei191-B4iLS1kduyOK9l7ciwN2VgLJkN3zUqw9B5QYAyajp1PzKjZFwUvEWOFhlhPz1c1m3M9B5ilYVS94";
-const VAPID_PRIVATE = process.env.VAPID_PRIVATE || "8Bpwd8MfnfNia-kC_6dhjOVGy5vuLcXGa3iGPIP_6DM";
+// --- web push (Web Push API / VAPID). Enabled only when web-push is installed AND keys are set. ---
+// Keys are read from env only (never commit them). Generate a pair with:
+//   npx web-push generate-vapid-keys
+// then set VAPID_PUBLIC / VAPID_PRIVATE (and VAPID_SUBJECT) in your environment.
+const VAPID_PUBLIC = process.env.VAPID_PUBLIC || "";
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE || "";
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:hello@cetele.app";
 let webpush = null;
-try { webpush = require("web-push"); webpush.setVapidDetails("mailto:hello@cetele.app", VAPID_PUBLIC, VAPID_PRIVATE); }
-catch { console.log("web-push not installed — run `npm install web-push` in cetele-backend to enable push delivery."); }
+try {
+  webpush = require("web-push");
+  if (VAPID_PUBLIC && VAPID_PRIVATE) webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
+  else { webpush = null; console.warn("VAPID keys not set (VAPID_PUBLIC / VAPID_PRIVATE) — push disabled."); }
+} catch { console.log("web-push not installed — run `npm install web-push` in cetele-backend to enable push delivery."); }
 function sendPush(userId, title, body, ref) {
   if (!webpush) return;
   const subs = db.prepare("SELECT * FROM push_subscriptions WHERE user_id = ?").all(userId);
@@ -208,7 +213,8 @@ if (!seeded && SEED_DEMO) {
 // --- helpers ---
 const app = express();
 if (process.env.TRUST_PROXY) app.set("trust proxy", Number(process.env.TRUST_PROXY) || 1); // set when behind a reverse proxy so req.ip is the client
-app.use(cors());
+const CORS_ORIGINS = (process.env.CORS_ORIGINS || "").split(",").map((o) => o.trim()).filter(Boolean);
+app.use(cors(CORS_ORIGINS.length ? { origin: CORS_ORIGINS } : {}));   // set CORS_ORIGINS in production to lock this down
 app.use(express.json({ limit: "64kb" }));   // cap request bodies
 
 // ----- tiny in-memory rate limiter (no external dependency) -----

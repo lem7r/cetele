@@ -139,14 +139,18 @@ const USER_TZ=(()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone;
 const logicalNow=()=>new Date(Date.now()-DAY_START_HOUR*3600000);
 const TODAY_ISO=isoOf(logicalNow());
 const addDaysIso=(iso,n)=>{const d=new Date(iso+"T00:00:00");d.setDate(d.getDate()+n);return isoOf(d);};
-/* the Sun–Sat week containing today */
-const WEEK_START_ISO=addDaysIso(TODAY_ISO,-new Date(TODAY_ISO+"T00:00:00").getDay());
-const WEEK_ISO=Array.from({length:7},(_,i)=>addDaysIso(WEEK_START_ISO,i));
-const WEEK_DAYS=WEEK_ISO.map((iso)=>{const d=new Date(iso+"T00:00:00");return {d:DOW[d.getDay()],n:d.getDate(),iso};});
-const TODAY_INDEX=WEEK_ISO.indexOf(TODAY_ISO);
+/* the week containing today; the start day (Sun/Mon) is user-configurable via applyWeekStart */
+const dowIndex=(iso)=>new Date(iso+"T00:00:00").getDay();               // 0=Sun..6=Sat (server week arrays are indexed this way)
+let WEEK_START_MON=false;
+const weekStartOffset=(iso)=>{const d=dowIndex(iso);return WEEK_START_MON?((d+6)%7):d;};
+let WEEK_START_ISO=addDaysIso(TODAY_ISO,-weekStartOffset(TODAY_ISO));
+let WEEK_ISO=Array.from({length:7},(_,i)=>addDaysIso(WEEK_START_ISO,i));
+let WEEK_DAYS=WEEK_ISO.map((iso)=>{const d=new Date(iso+"T00:00:00");return {d:DOW[d.getDay()],n:d.getDate(),iso};});
+let TODAY_INDEX=WEEK_ISO.indexOf(TODAY_ISO);
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const fmtMD=(iso)=>`${MONTHS[+iso.slice(5,7)-1]} ${+iso.slice(8,10)}`;
-const WEEK_LABEL=`${fmtMD(WEEK_ISO[0])} – ${WEEK_ISO[0].slice(0,7)===WEEK_ISO[6].slice(0,7)?(+WEEK_ISO[6].slice(8,10)):fmtMD(WEEK_ISO[6])}`;
+let WEEK_LABEL=`${fmtMD(WEEK_ISO[0])} – ${WEEK_ISO[0].slice(0,7)===WEEK_ISO[6].slice(0,7)?(+WEEK_ISO[6].slice(8,10)):fmtMD(WEEK_ISO[6])}`;
+const applyWeekStart=(mon)=>{WEEK_START_MON=!!mon;WEEK_START_ISO=addDaysIso(TODAY_ISO,-weekStartOffset(TODAY_ISO));WEEK_ISO=Array.from({length:7},(_,i)=>addDaysIso(WEEK_START_ISO,i));WEEK_DAYS=WEEK_ISO.map((iso)=>{const d=new Date(iso+"T00:00:00");return {d:DOW[d.getDay()],n:d.getDate(),iso};});TODAY_INDEX=WEEK_ISO.indexOf(TODAY_ISO);WEEK_LABEL=`${fmtMD(WEEK_ISO[0])} – ${WEEK_ISO[0].slice(0,7)===WEEK_ISO[6].slice(0,7)?(+WEEK_ISO[6].slice(8,10)):fmtMD(WEEK_ISO[6])}`;};
 const isFutureIdx=(i)=>i>TODAY_INDEX;
 const EDIT_WINDOW_DAYS=2;
 /* editable: today or up to 2 calendar days before today; never the future */
@@ -162,8 +166,8 @@ const deriveGoal=(g)=>{if(!g.log)return g; /* server already supplies derived fi
   return {...g,values:WEEK_ISO.map((iso)=>valOnIso(g,iso)),week:WEEK_ISO.map((iso)=>metOnIso(g,iso)?1:0),streak:computeStreak(g)};};
 const normalizeGoals=(gs)=>gs.map(deriveGoal);
 
-const metOn=(g,i)=>g.week?g.week[i]===1:false;
-const metToday=(g)=>metOn(g,TODAY_INDEX);
+const metOn=(g,i)=>metOnDate(g,WEEK_ISO[i]);
+const metToday=(g)=>metOnDate(g,TODAY_ISO);
 const weekDone=(g)=>g.week.reduce((a,b)=>a+b,0);
 /* ===== date-based lookups (work for any week, not just the current one) ===== */
 const offsetOf=(iso)=>Math.round((Date.parse(TODAY_ISO+"T00:00:00")-Date.parse(iso+"T00:00:00"))/86400000); // >0 = past
@@ -172,12 +176,12 @@ const isFutureIso=(iso)=>iso>TODAY_ISO;
 const metOnDate=(g,iso)=>{
   if(g.log&&g.log[iso]!=null)return metValue(g,g.log[iso]);
   if(g.history&&g.history[iso]!=null)return g.history[iso]===1;
-  const wi=WEEK_ISO.indexOf(iso);if(wi>=0&&g.week)return g.week[wi]===1;
+  if(WEEK_ISO.indexOf(iso)>=0&&g.week)return g.week[dowIndex(iso)]===1; // server arrays are day-of-week indexed
   return false;
 };
 const valueOnDate=(g,iso)=>{
   if(g.log&&g.log[iso]!=null)return g.log[iso];
-  const wi=WEEK_ISO.indexOf(iso);if(wi>=0&&g.values)return g.values[wi];
+  if(WEEK_ISO.indexOf(iso)>=0&&g.values)return g.values[dowIndex(iso)]; // server arrays are day-of-week indexed
   return 0; // server past-week raw value isn't retained; met-state still renders
 };
 const dowOf=(iso)=>DOW[new Date(iso+"T00:00:00").getDay()];
@@ -644,7 +648,7 @@ function MentorScreen({cohorts,goals,onOpenMentee,onOpenGoal,onAddGoal,onNudge,n
 }
 
 /* ---------- No cohorts ---------- */
-function NoCohortsScreen({onJoinOpen}){
+function NoCohortsScreen({onJoinOpen,onCreateOpen}){
   return (
     <div className="px-6 pt-12 pb-28 flex flex-col items-center text-center">
       <div className="flex items-center justify-center rounded-3xl mb-5" style={{width:96,height:96,background:PINE_SOFT}}>
@@ -653,6 +657,7 @@ function NoCohortsScreen({onJoinOpen}){
       <h2 style={{fontFamily:FD,fontSize:26,fontWeight:600,color:INK,letterSpacing:-0.5}}>You're not in a cohort yet</h2>
       <p style={{fontSize:14,color:INK2,lineHeight:1.55,marginTop:10,maxWidth:300}}>Cohorts are where it happens — a mentor sets shared goals, and everyone tallies their progress and cheers each other on.</p>
       <button onClick={onJoinOpen} className="mt-7 rounded-2xl font-semibold flex items-center justify-center gap-2" style={{height:52,width:"100%",maxWidth:300,background:PINE,color:"#fff",fontSize:15}}><Compass size={18}/> Join a cohort</button>
+      {onCreateOpen&&<button onClick={onCreateOpen} className="mt-2.5 rounded-2xl font-semibold flex items-center justify-center gap-2" style={{height:52,width:"100%",maxWidth:300,background:PINE_SOFT,color:PINE_DEEP,fontSize:15,border:`1px solid ${MINT_BORDER}`}}><Sparkles size={18}/> Create a cohort</button>}
       <div className="flex items-center gap-1.5 mt-3" style={{color:INK3}}><Ticket size={14}/><span style={{fontSize:12.5}}>Have an invite code? Enter it when you join.</span></div>
       <div className="mt-8 rounded-2xl p-4 flex items-start gap-3" style={{background:SUNKEN,maxWidth:330}}>
         <Sparkles size={18} style={{color:PINE,marginTop:1}}/>
@@ -852,7 +857,7 @@ function InsightsScreen({goals,subscribed}){
   const pct=target?Math.round((marks/target)*100):0;
   const dayData=WEEK_DAYS.map((d,i)=>({day:d.d,pct:visible.length?Math.round(visible.filter((g)=>metOn(g,i)).length/visible.length*100):0}));
   const bestDay=dayData.reduce((b,d)=>d.pct>b.pct?d:b,{day:"—",pct:0});
-  const goalBars=visible.map((g)=>({name:g.title.split(" ")[0],done:weekDone(g)}));
+  const goalBars=visible.map((g)=>{const w=g.title.split(" ")[0];return {name:w.length>9?w.slice(0,8)+"…":w,full:g.title,done:weekDone(g)};});
   const streaks=[...visible].sort((a,b)=>b.streak-a.streak);
   const topStreak=streaks.length?streaks[0].streak:0;
   // last 30 days: share of goals met per day (from date-keyed logs / server history)
@@ -896,10 +901,10 @@ function InsightsScreen({goals,subscribed}){
       </div>
       <div className="rounded-2xl p-4 mb-4" style={{background:CARD,border:`1px solid ${BORDER}`}}>
         <p className="mb-1" style={{fontFamily:FD,fontSize:15.5,fontWeight:600,color:INK}}>My week by goal</p><p style={{fontSize:12,color:INK3}} className="mb-3">Days the minimum was met</p>
-        <div style={{overflowX:"auto",overflowY:"hidden"}}><div style={{height:170,minWidth:goalBars.length>6?`${goalBars.length*54}px`:"100%"}}><ResponsiveContainer width="100%" height="100%">
+        <div style={{overflowX:"auto",overflowY:"hidden"}}><div style={{height:170,minWidth:goalBars.length>5?`${goalBars.length*58}px`:"100%"}}><ResponsiveContainer width="100%" height="100%">
           <BarChart data={goalBars} margin={{top:4,right:4,left:-22,bottom:0}}>
             <CartesianGrid vertical={false} stroke={SUNKEN}/><XAxis dataKey="name" tick={{fontSize:11,fill:INK3}} axisLine={false} tickLine={false}/><YAxis tick={{fontSize:11,fill:INK3}} axisLine={false} tickLine={false} domain={[0,7]}/>
-            <Tooltip contentStyle={{borderRadius:12,border:`1px solid ${BORDER2}`,fontSize:12}} cursor={{fill:"#faf9f7"}} formatter={(v)=>[`${v}/7 days`,""]}/>
+            <Tooltip contentStyle={{borderRadius:12,border:`1px solid ${BORDER2}`,fontSize:12}} cursor={{fill:"#faf9f7"}} formatter={(v)=>[`${v}/7 days`,""]} labelFormatter={(l,p)=>(p&&p[0]&&p[0].payload.full)||l}/>
             <Bar dataKey="done" radius={[6,6,0,0]}>{goalBars.map((b,i)=><Cell key={i} fill={b.done>=6?PINE:b.done>=4?FRESH:"#fbbf24"}/>)}</Bar>
           </BarChart></ResponsiveContainer></div></div>
       </div>
@@ -1254,7 +1259,7 @@ function GoalSheet({mode,goal,defaultVis,onClose,onSave,friends=[],preset}){
         {category==="cohort"&&canCreateCohort&&(<div className="mb-4 mt-2"><label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Which cohort?</label><div className="mt-1.5 space-y-2">{mentorCohorts().map((id)=>{const on=cid===id;return(<button key={id} onClick={()=>setCid(id)} className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-left" style={{background:on?PINE_SOFT:SUNKEN,border:on?`1.5px solid ${PINE}`:"1.5px solid transparent"}}><span className="font-semibold" style={{fontSize:14,color:on?PINE_DEEP:INK}}>{COHORTS[id].fullName}</span>{on&&<Check size={15} style={{color:PINE}} strokeWidth={3}/>}</button>);})}</div></div>)}
       </>)}
       <label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Type</label>
-      <div className="mt-1.5 mb-2"><Seg options={[{v:"binary",l:"Done / not done"},{v:"numeric",l:"Numeric"}]} value={type} onChange={setType}/></div>
+      <div className="mt-1.5 mb-2"><Seg options={[{v:"binary",l:"Completion"},{v:"numeric",l:"Numeric"}]} value={type} onChange={setType}/></div>
       <p style={{fontSize:11.5,color:INK3,marginBottom:16}}>{type==="binary"?"One tap marks the day complete.":"Set a daily minimum. Hitting it earns a tally; your entry is always recorded."}</p>
       {type==="numeric"&&(<div className="rounded-xl p-3.5 mb-4" style={{background:SUNKEN}}>
         <label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Daily minimum</label>
@@ -1287,7 +1292,7 @@ const DEFAULT_SETTINGS={
   defaultVis:"private",
   reduceMotion:false,
   weekStart:"sun",
-server:{on:true,url:"https://cetele-api.onrender.com"},
+server:{on:true,url:(import.meta.env&&import.meta.env.VITE_API_BASE)||"https://cetele-api.onrender.com"},  // override per build with VITE_API_BASE
   push:false,
 };
 const SERVER_KEY="cetele:server:v1";
@@ -1389,11 +1394,11 @@ function SettingsScreen({settings,onChange,subscribed,onLeave,onJoinOpen,onReset
       <Eyebrow>Language &amp; region</Eyebrow>
       <GroupCard>
         <SettingRow icon={Languages} label="Language" right={<span className="inline-flex items-center gap-2"><span style={{fontSize:13,color:INK2}}>English</span><SoonPill/></span>}/>
-        <SettingRow icon={Compass} label="Week starts on" last right={
+        <SettingRow icon={Compass} label="Week Start" last right={
           <div className="flex rounded-full p-0.5" style={{background:SUNKEN}}>{[["sun","Sun"],["mon","Mon"]].map(([v,l])=>{const on=settings.weekStart===v;return <button key={v} onClick={()=>onChange({...settings,weekStart:v})} className="rounded-full font-semibold" style={{fontSize:12,padding:"5px 12px",background:on?"#fff":"transparent",color:on?PINE_DEEP:INK2,boxShadow:on?"0 1px 2px rgba(28,25,23,.05)":"none"}}>{l}</button>;})}</div>
         }/>
       </GroupCard>
-      <p style={{fontSize:11.5,color:INK3,margin:"0 4px 22px",lineHeight:1.45}}>The demo week is fixed to Sep 7–13, so this won't shift the day strip yet.</p>
+      <div className="mb-6"/>
 
       <Eyebrow>Your cohorts</Eyebrow>
       <GroupCard>
@@ -1431,7 +1436,7 @@ function SettingsScreen({settings,onChange,subscribed,onLeave,onJoinOpen,onReset
 
       <div className="flex flex-col items-center text-center pt-2">
         <div className="flex items-center justify-center rounded-2xl mb-2.5" style={{width:44,height:44,background:PINE}}><TallyMarks count={4} color="#a7f3d0" scale={0.7}/></div>
-        <div style={{fontFamily:FD,fontSize:16,fontWeight:600,color:INK}}>Çetele 1.32</div>
+        <div style={{fontFamily:FD,fontSize:16,fontWeight:600,color:INK}}>Çetele 1.2.0</div>
         <p style={{fontSize:12,color:INK3,marginTop:2}}>Made for cohorts who keep each other going.</p>
         <div className="flex items-center gap-3 mt-3" style={{fontSize:12,color:INK2}}><span className="inline-flex items-center gap-1">Terms <SoonPill/></span><span style={{color:BORDER2}}>·</span><span className="inline-flex items-center gap-1">Privacy <SoonPill/></span></div>
       </div>
@@ -1519,7 +1524,7 @@ function GoalDetailScreen({goal:g,onBack,onSetValue,onToggle,onEditVis,onEdit,on
   const [editing,setEditing]=useState(false);const [temp,setTemp]=useState("");
   const th=g.category==="cohort"?themeOf(g.cohortId):null;const accent=th?th.dot:PINE;
   const done=weekDone(g);const p=g.target?Math.round((done/g.target)*100):0;
-  const met=metOn(g,day);const val=g.values?g.values[day]:0;const canLog=dayEditable(day);const isFuture=isFutureIdx(day);
+  const met=metOn(g,day);const val=valueOnDate(g,WEEK_ISO[day]);const canLog=dayEditable(day);const isFuture=isFutureIdx(day);
   const isToday=day===TODAY_INDEX;const dayLabel=isToday?"Today":`${WEEK_DAYS[day].d} ${WEEK_DAYS[day].n}`;
   const maxVal=Math.max(g.dailyMin||1,...(g.values||[1]),1);
   const commit=()=>{const v=Math.max(0,parseInt(temp||"0",10)||0);onSetValue(g.id,WEEK_ISO[day],v);setEditing(false);};
@@ -1542,7 +1547,7 @@ function GoalDetailScreen({goal:g,onBack,onSetValue,onToggle,onEditVis,onEdit,on
         </div>
         <div className="flex items-center gap-2.5">
           <div className="flex items-center justify-center rounded-2xl" style={{width:46,height:46,background:th?th.soft:PINE_SOFT}}><g.Icon size={24} style={{color:accent}}/></div>
-          <div className="min-w-0"><h2 style={{fontFamily:FD,fontSize:23,fontWeight:600,color:INK,letterSpacing:-0.4,lineHeight:1.1}}>{g.title}</h2><p style={{fontSize:12.5,color:INK3}}>{g.type==="numeric"?`Minimum ${g.dailyMin} ${g.unit} a day`:"Done each day"} · {g.target}× weekly target</p></div>
+          <div className="min-w-0" style={{flex:1}}><h2 style={{fontFamily:FD,fontSize:23,fontWeight:600,color:INK,letterSpacing:-0.4,lineHeight:1.15,overflowWrap:"anywhere",wordBreak:"break-word",hyphens:"auto"}}>{g.title}</h2><p style={{fontSize:12.5,color:INK3}}>{g.type==="numeric"?`Minimum ${g.dailyMin} ${g.unit} a day`:"Done each day"} · {g.target}× weekly target</p></div>
         </div>
       </div>
 
@@ -1557,7 +1562,7 @@ function GoalDetailScreen({goal:g,onBack,onSetValue,onToggle,onEditVis,onEdit,on
       <div className="px-4 mt-4"><div className="rounded-2xl p-4" style={{background:CARD,border:`1px solid ${BORDER}`}}>
         <div className="flex items-center justify-between mb-3"><p className="font-semibold" style={{color:INK,fontSize:14}}>This week · {WEEK_LABEL}</p><span style={{fontSize:11.5,color:INK3}}>tap a day</span></div>
         <div className="flex items-end justify-between gap-1.5" style={{height:104}}>
-          {WEEK_DAYS.map((d,i)=>{const v=g.values?g.values[i]:0;const m=metOn(g,i);const frac=g.type==="binary"?(m?1:0):Math.min((v||0)/maxVal,1);const barColor=m?accent:(v>0?"#fbbf24":"transparent");const on=i===day;return(
+          {WEEK_DAYS.map((d,i)=>{const v=valueOnDate(g,WEEK_ISO[i]);const m=metOn(g,i);const frac=g.type==="binary"?(m?1:0):Math.min((v||0)/maxVal,1);const barColor=m?accent:(v>0?"#fbbf24":"transparent");const on=i===day;return(
             <button key={i} onClick={()=>setDay(i)} className="flex-1 flex flex-col items-center gap-1.5" style={{minWidth:0}}>
               <div className="w-full flex items-end" style={{height:78,background:SUNKEN,borderRadius:7,overflow:"hidden",outline:on?`2px solid ${accent}`:"none",outlineOffset:1}}>
                 <div style={{width:"100%",height:`${Math.max(frac*100,frac>0?6:0)}%`,background:barColor,borderRadius:frac>=0.99?"7px 7px 0 0":"4px 4px 0 0"}}/>
@@ -2229,6 +2234,7 @@ export default function App(){
   },[openMember]);
   useEffect(()=>{setSessionExpiredHandler(()=>{setAuthToken(null);Store.set(AUTH_KEY,null);setAuthed(false);setToast("Your session expired — please sign in again.");});return ()=>setSessionExpiredHandler(null);},[]);
   useEffect(()=>{let live=true;Store.get(COHORT_EXPAND_KEY).then((v)=>{if(live&&v&&typeof v==="object")setCohortExpanded(v);});return ()=>{live=false;};},[]);
+  useEffect(()=>{applyWeekStart(settings.weekStart==="mon");setGoals((gs)=>gs.map((g)=>g.log?deriveGoal(g):g));setSelectedIso((cur)=>WEEK_ISO.indexOf(cur)>=0||cur===TODAY_ISO?cur:TODAY_ISO);setCohortRev((v)=>v+1);},[settings.weekStart]);
   useEffect(()=>{
     if(!booted||recapCheckedRef.current||showOnboarding||goals.length===0)return;
     recapCheckedRef.current=true;
@@ -2241,7 +2247,7 @@ export default function App(){
     })();
   },[goals,showOnboarding,booted]);
 
-  const marksToday=23+goals.filter((g)=>metToday(g)).length;
+  const marksToday=(API_BASE?0:23)+goals.filter((g)=>metToday(g)).length;   // demo shows a lively base; server counts only real logs
   const loadMoreFeed=async(scope)=>{
     if(!API_BASE||feedLoadingMore)return;
     const list=scope==="friend"?friendFeed:feed;const last=list[list.length-1];const before=last&&last.cursor;
@@ -2286,8 +2292,8 @@ export default function App(){
     const justCompleted=!!g0&&!wasMet&&metValue(g0,v0)&&iso<=TODAY_ISO;
     if(justCompleted){try{if(typeof navigator!=="undefined"&&navigator.vibrate)navigator.vibrate(14);}catch{/* no haptics */}}
     if(API_BASE){
-      const wi=WEEK_ISO.indexOf(iso);
-      setGoals((gs)=>gs.map((g)=>{if(g.id!==id)return g;const v=Math.min(9999999,Math.max(0,Math.round(val)||0));const m=metValue(g,v)?1:0;let values=g.values,week=g.week;if(wi>=0){values=[...(g.values||Array(7).fill(0))];values[wi]=v;week=[...(g.week||Array(7).fill(0))];week[wi]=m;}const history={...(g.history||{}),[iso]:m};return {...g,values,week,history};}));
+      const inWeek=WEEK_ISO.indexOf(iso)>=0;const di=dowIndex(iso);
+      setGoals((gs)=>gs.map((g)=>{if(g.id!==id)return g;const v=Math.min(9999999,Math.max(0,Math.round(val)||0));const m=metValue(g,v)?1:0;let values=g.values,week=g.week;if(inWeek){values=[...(g.values||Array(7).fill(0))];values[di]=v;week=[...(g.week||Array(7).fill(0))];week[di]=m;}const history={...(g.history||{}),[iso]:m};return {...g,values,week,history};}));
       api.setLog(id,iso,val,null).then((u)=>{if(u&&u.id){setGoals((gs)=>gs.map((g)=>g.id===id?{...g,...u,Icon:g.Icon}:g));if(justCompleted)checkMilestone(id,u.title,u.streak);}});
       return;
     }
@@ -2388,7 +2394,7 @@ export default function App(){
         @media (prefers-reduced-motion: reduce){.czsheet,.czpop,.czspin,.czshim{animation:none}.cz button:active{transform:none}}
         .cz-reduce .czsheet,.cz-reduce .czpop,.cz-reduce .czspin,.cz-reduce .czshim{animation:none}.cz-reduce button:active{transform:none}`}</style>
 
-      <div data-rev={cohortRev} className={"cz w-full flex flex-col"+(settings.reduceMotion?" cz-reduce":"")} style={{maxWidth:430,background:CANVAS,minHeight:"100vh"}}>
+      <div lang="en" data-rev={cohortRev} className={"cz w-full flex flex-col"+(settings.reduceMotion?" cz-reduce":"")} style={{maxWidth:430,background:CANVAS,minHeight:"100vh"}}>
         <header className="sticky top-0 px-4 py-3 flex items-center justify-between" style={{zIndex:60,background:"#faf9f7e6",backdropFilter:"blur(8px)",borderBottom:`1px solid ${BORDER}`}}>
           <button onClick={()=>{setShowSettings(false);setEditProfile(false);setShowSearch(false);setShowNotifs(false);setOpenMember(null);setDetailGoalId(null);setMentorView(null);}} aria-label="Home" className="flex items-center gap-2"><div className="flex items-center justify-center rounded-xl" style={{width:32,height:32,background:PINE}}><TallyMarks count={4} color="#a7f3d0" scale={0.6}/></div><span style={{fontFamily:FD,fontWeight:600,fontSize:22,color:INK,letterSpacing:-0.5}}>Çetele</span></button>
           <div className="flex items-center gap-1.5">
@@ -2424,7 +2430,7 @@ export default function App(){
             :detailGoal?<GoalDetailScreen goal={detailGoal} onBack={()=>setDetailGoalId(null)} onSetValue={setValue} onToggle={toggle} onEditVis={(id)=>setSheet({kind:"vis",goalId:id})} onEdit={(id)=>setSheet({kind:"edit",goalId:id})} onDelete={(id)=>setConfirmDelete(id)} canManage={detailGoal.category==="personal"||isMentorOfCohort(detailGoal.cohortId)}/>
             :mentorView?(mentorView.kind==="mentee"?<MentorMenteeScreen data={mentorView.data} loading={mentorView.loading} cohortName={COHORTS[mentorView.cohortId]?COHORTS[mentorView.cohortId].name:""} onBack={closeMentorView} onOpenGoal={(gid)=>openGoalHistory(mentorView.cohortId,mentorView.id,gid)}/>:mentorView.kind==="goal"?<MentorGoalScreen data={mentorView.data} loading={mentorView.loading} cohortName={COHORTS[mentorView.cohortId]?COHORTS[mentorView.cohortId].name:""} onBack={closeMentorView} onOpenMentee={(mid)=>openMenteeView(mentorView.cohortId,mid)}/>:<MentorGoalHistoryScreen data={mentorView.data} loading={mentorView.loading} onBack={()=>openMenteeView(mentorView.cohortId,mentorView.memberId)}/>)
             :(settings.server.on&&dataState==="loading"&&!hydrated.current)?<SkeletonScreen/>
-            :(safeTab==="feed"||safeTab==="cohort")&&noCohorts?<NoCohortsScreen onJoinOpen={()=>setSheet({kind:"join"})}/>
+            :(safeTab==="feed"||safeTab==="cohort")&&noCohorts?<NoCohortsScreen onJoinOpen={()=>setSheet({kind:"join"})} onCreateOpen={safeTab==="cohort"?()=>setSheet({kind:"create"}):undefined}/>
             :safeTab==="feed"?<FeedScreen feed={feed} friendFeed={friendFeed} friends={friends} subscribed={subscribed} onCheer={cheer} onOpenMember={setOpenMember} onOpenSearch={()=>{setShowSettings(false);setEditProfile(false);setOpenMember(null);setShowSearch(true);}} marksToday={marksToday} profile={profile} feedMore={feedMore} loadingMore={feedLoadingMore} onLoadMore={loadMoreFeed}/>
             :safeTab==="cetele"?<CeteleScreen goals={goals} subscribed={subscribed} onSetValue={setValue} onToggle={toggle} onEditVis={(id)=>setSheet({kind:"vis",goalId:id})} onEdit={(id)=>setSheet({kind:"edit",goalId:id})} onDelete={(id)=>setConfirmDelete(id)} onAdd={()=>setSheet({kind:"add"})} onOpenGoal={(id)=>setDetailGoalId(id)} selectedIso={selectedIso} setSelectedIso={setSelectedIso} cohortExpanded={cohortExpanded} onToggleCohort={toggleCohortExpand}/>
             :safeTab==="cohort"?<CohortScreen subscribed={subscribed} onOpenMember={setOpenMember} onJoinOpen={()=>setSheet({kind:"join"})} onCreateOpen={()=>setSheet({kind:"create"})} onSettingsOpen={(id)=>setSheet({kind:"cohortSettings",id})} onLeave={(id)=>setConfirmLeave(id)} profile={profile}/>
