@@ -595,13 +595,15 @@ app.post("/api/goals/:id/logs", requireAuth, (req, res) => {
 // --- cohort create / update (mentor-owned) ---
 // invite codes: 5 random uppercase letters (not derived from the name), collision-checked
 function randomInviteCode() {
-  const A = "ABCDEFGHIJKLMNPQRSTUVWXYZ";
+  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const rand3 = () => String(Math.floor(Math.random() * 1000)).padStart(3, "0");
   for (let attempt = 0; attempt < 40; attempt++) {
-    let code = "";
-    for (let i = 0; i < 5; i++) code += A[Math.floor(Math.random() * A.length)];
+    let letters = "";
+    for (let i = 0; i < 5; i++) letters += A[Math.floor(Math.random() * A.length)];
+    const code = `${letters}-${rand3()}`;   // e.g. KDMWZ-482 — fully random, not name-derived
     if (!db.prepare("SELECT 1 FROM cohorts WHERE invite_code = ?").get(code)) return code;
   }
-  return "K" + Date.now().toString(36).slice(-4).toUpperCase();
+  return "KOHRT-" + rand3();
 }
 app.post("/api/cohorts", requireAuth, createLimiter, (req, res) => {
   const name = cleanText(req.body.name, 24);

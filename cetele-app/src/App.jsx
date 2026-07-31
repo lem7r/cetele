@@ -1163,16 +1163,16 @@ function Seg({options,value,onChange}){
 }
 function JoinSheet({onJoinCode,onClose}){
   const [code,setCode]=useState("");const [err,setErr]=useState("");const [busy,setBusy]=useState(false);
-  const fmt=(raw)=>(raw||"").toUpperCase().replace(/[^A-Z]/g,"").slice(0,5);
+  const fmt=(raw)=>{const s=(raw||"").toUpperCase().replace(/[^A-Z0-9]/g,"");const letters=s.replace(/[0-9]/g,"").slice(0,5);const digits=s.replace(/[^0-9]/g,"").slice(0,3);return letters.length<5?letters:`${letters}-${digits}`;};
   const tryCode=async()=>{if(!code.trim()||busy)return;setBusy(true);setErr("");const e=await onJoinCode(code.trim());setBusy(false);if(e)setErr(e);};
   return (
     <Sheet title="Join a cohort" onClose={onClose}>
       <label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Invite code</label>
       <div className="flex gap-2 mt-1.5 mb-1">
-        <input value={code} maxLength={5} onChange={(e)=>{setCode(fmt(e.target.value));if(err)setErr("");}} onKeyDown={(e)=>{if(e.key==="Enter")tryCode();}} placeholder="e.g. KDMWZ" autoCapitalize="characters" autoCorrect="off" autoComplete="off" spellCheck={false} inputMode="text" className="flex-1 rounded-xl px-3.5 outline-none" style={{height:46,border:`1px solid ${err?CHEER:BORDER2}`,fontSize:16,color:INK,background:"#fff",letterSpacing:4,fontFamily:FD,textTransform:"uppercase"}}/>
+        <input value={code} maxLength={9} onChange={(e)=>{setCode(fmt(e.target.value));if(err)setErr("");}} onKeyDown={(e)=>{if(e.key==="Enter")tryCode();}} placeholder="e.g. KDMWZ-482" autoCapitalize="characters" autoCorrect="off" autoComplete="off" spellCheck={false} inputMode="text" className="flex-1 rounded-xl px-3.5 outline-none" style={{height:46,border:`1px solid ${err?CHEER:BORDER2}`,fontSize:16,color:INK,background:"#fff",letterSpacing:3,fontFamily:FD,textTransform:"uppercase"}}/>
         <button disabled={!code.trim()||busy} onClick={tryCode} className="rounded-xl font-semibold px-5" style={{height:46,background:code.trim()&&!busy?PINE:SUNKEN,color:code.trim()&&!busy?"#fff":INK3,fontSize:14}}>{busy?"…":"Join"}</button>
       </div>
-      <p style={{fontSize:12,color:err?CHEER:INK3,marginBottom:18,minHeight:16}}>{err||"Ask a mentor for their cohort's 5-letter invite code."}</p>
+      <p style={{fontSize:12,color:err?CHEER:INK3,marginBottom:18,minHeight:16}}>{err||"Ask a mentor for their cohort's invite code."}</p>
       <div className="rounded-xl p-3.5 flex items-start gap-2.5" style={{background:SUNKEN}}>
         <Lock size={15} style={{color:INK2,marginTop:1}}/>
         <p style={{fontSize:12,color:INK2,lineHeight:1.5}}>Cohorts are private. You can only join one with an invite code from someone already inside.</p>
