@@ -73,7 +73,7 @@ const fmtAgo=(m)=>{                     // compact relative time: min -> h m -> 
   return `${Math.floor(d/365)}y`;
 };
 const fmtAgoLabel=(m)=>{const s=fmtAgo(m);return s==="just now"?s:`${s} ago`;};
-const inviteCode=(id)=>{const c=COHORTS[id];if(!c)return"";if(c.inviteCode)return c.inviteCode;const base=(c.name||"cohort").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8)||"COHORT";return `${base}-${100+(hash(id)%900)}`;};
+const inviteCode=(id)=>{const c=COHORTS[id];if(!c)return"";if(c.inviteCode)return c.inviteCode;if(API_BASE)return"";const base=(c.name||"cohort").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8)||"COHORT";return `${base}-${100+(hash(id)%900)}`;};
 const cohortByCode=(code)=>{const q=(code||"").trim().toLowerCase();return cohortIds().find((id)=>inviteCode(id).toLowerCase()===q);};
 const DEFAULT_SUBS=["sunrise","northstar","horizon"];
 const cohortName=(id)=>COHORTS[id]?.name||"Cohort";
@@ -341,7 +341,7 @@ const api={
   async loadCohorts(){
     if(!API_BASE)return null;
     try{const r=await apiFetch(`${API_BASE}/api/cohorts/full`);if(!r.ok)return null;const arr=await r.json();
-      const map={};arr.forEach((c)=>{(c.members||[]).forEach(cacheUser);map[c.id]={id:c.id,name:c.name,fullName:c.fullName,theme:c.theme||"pine",description:c.description||"",marks:c.marks,target:c.target,members:c.members||[]};});return map;}
+      const map={};arr.forEach((c)=>{(c.members||[]).forEach(cacheUser);map[c.id]={id:c.id,name:c.name,fullName:c.fullName,theme:c.theme||"pine",description:c.description||"",inviteCode:c.inviteCode,marks:c.marks,target:c.target,members:c.members||[]};});return map;}
     catch{return null;}
   },
   async loadFeed(scope,before,limit){
