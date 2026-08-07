@@ -807,13 +807,14 @@ function PulseCarousel({subscribed,marksToday,profile}){
   const [idx,setIdx]=useState(0);
   const kohorts=subscribed.map((id)=>COHORTS[id]).filter(Boolean);
   const slides=[
-    {key:"__all",total:true,name:"Everything",marks:marksToday,
-     sub:`you + ${subscribed.length} ${subscribed.length===1?"Kohort":"Kohorts"}`,
-     bg:"linear-gradient(140deg, #0b4a3b, #0f766e)",ring:"#0b4a3b",tally:"#a7f3d0",members:null},
+    {key:"__all",total:true,label:"Today · your whole tally",foot:"marks logged",marks:marksToday,
+     bg:"linear-gradient(140deg, #0b4a3b, #0f766e)",border:"transparent",fg:"#ffffff",muted:"rgba(255,255,255,.85)",
+     num:"#ffffff",tally:"#a7f3d0",ring:"#0b4a3b",chip:"rgba(255,255,255,.2)",chipFg:"#ffffff",
+     dot:"#ffffff",dotOff:"rgba(255,255,255,.4)",spark:"#ffffff",sparkOp:0.15,members:null},
     ...kohorts.map((c)=>{const th=THEMES[c.theme||"pine"];const logged=c.members.filter((m)=>m.loggedToday).length;
-      return {key:c.id,total:false,name:c.fullName,marks:logged,
-        sub:`of ${c.members.length} logged today`,
-        bg:`linear-gradient(140deg, ${th.accent}, ${th.dot})`,ring:th.accent,tally:"#ffffff",members:c.members};}),
+      return {key:c.id,total:false,label:`${c.fullName} · today`,foot:`of ${c.members.length} logged today`,marks:logged,
+        bg:th.soft,border:th.border,fg:INK,muted:INK2,num:th.accent,tally:th.accent,ring:th.soft,
+        chip:"#ffffff",chipFg:th.accent,dot:th.accent,dotOff:th.border,spark:th.accent,sparkOp:0.1,members:c.members};}),
   ];
   const i=Math.min(idx,slides.length-1);const s=slides[i];
   const startX=useRef(null);
@@ -821,20 +822,21 @@ function PulseCarousel({subscribed,marksToday,profile}){
   const onTE=(e)=>{if(startX.current==null)return;const dx=e.changedTouches[0].clientX-startX.current;if(Math.abs(dx)>40)setIdx((k)=>Math.max(0,Math.min(slides.length-1,k+(dx<0?1:-1))));startX.current=null;};
   const go=(d)=>setIdx((k)=>Math.max(0,Math.min(slides.length-1,k+d)));
   return (
-    <div className="rounded-3xl p-5 mb-4 text-white relative overflow-hidden" style={{background:s.bg,transition:"background .25s"}} onTouchStart={onTS} onTouchEnd={onTE}>
-      <div className="absolute -right-6 -top-8 opacity-15"><Sparkles size={120}/></div>
-      <div className="flex items-center justify-between gap-2">
-        <p className="font-medium" style={{fontSize:13,opacity:0.9,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.total?"Today · your whole tally":`${s.name} · today`}</p>
-        {slides.length>1&&<div className="flex items-center gap-1.5 shrink-0">
-          <button onClick={()=>go(-1)} disabled={i===0} aria-label="Previous" className="flex items-center justify-center rounded-full" style={{width:27,height:27,background:"rgba(255,255,255,.18)",opacity:i===0?0.35:1}}><ChevronLeft size={16}/></button>
-          <button onClick={()=>go(1)} disabled={i===slides.length-1} aria-label="Next" className="flex items-center justify-center rounded-full" style={{width:27,height:27,background:"rgba(255,255,255,.18)",opacity:i===slides.length-1?0.35:1}}><ChevronRight size={16}/></button>
+    <div className="rounded-3xl p-5 mb-4 relative overflow-hidden" style={{background:s.bg,border:`1px solid ${s.border}`,color:s.fg,transition:"background .25s, border-color .25s"}} onTouchStart={onTS} onTouchEnd={onTE}>
+      <div className="absolute -right-6 -top-8" style={{opacity:s.sparkOp,color:s.spark,pointerEvents:"none"}}><Sparkles size={120}/></div>
+      <div className="flex items-center justify-between gap-2" style={{position:"relative"}}>
+        <p className="font-medium" style={{fontSize:13,color:s.muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.label}</p>
+        {slides.length>1&&<div className="flex items-center gap-1.5 shrink-0" style={{position:"relative"}}>
+          <button type="button" onClick={()=>go(-1)} disabled={i===0} aria-label="Previous" className="flex items-center justify-center rounded-full" style={{width:28,height:28,background:s.chip,color:s.chipFg,opacity:i===0?0.4:1}}><ChevronLeft size={16}/></button>
+          <button type="button" onClick={()=>go(1)} disabled={i===slides.length-1} aria-label="Next" className="flex items-center justify-center rounded-full" style={{width:28,height:28,background:s.chip,color:s.chipFg,opacity:i===slides.length-1?0.4:1}}><ChevronRight size={16}/></button>
         </div>}
       </div>
-      <div className="flex items-end gap-3 mt-1"><span style={{fontFamily:FD,fontSize:48,lineHeight:1,fontWeight:600,letterSpacing:-1.5}}>{s.marks}</span><span className="mb-1.5" style={{fontSize:13.5,opacity:0.9}}>{s.total?"marks logged":s.sub}</span></div>
-      {s.total&&<p style={{fontSize:12.5,opacity:0.8,marginTop:3}}>{s.sub}</p>}
+      <div className="flex items-end gap-3 mt-1"><span style={{fontFamily:FD,fontSize:48,lineHeight:1,fontWeight:600,letterSpacing:-1.5,color:s.num}}>{s.marks}</span><span className="mb-1.5" style={{fontSize:13.5,color:s.muted}}>{s.foot}</span></div>
       <div className="mt-3"><TallyMarks count={s.marks} color={s.tally}/></div>
-      {s.members&&<div className="flex -space-x-2 mt-4">{s.members.slice(0,8).map((m)=><div key={m.id} style={{boxShadow:`0 0 0 2px ${s.ring}`,borderRadius:99,opacity:m.loggedToday?1:0.5}}><Avatar name={dispName(m.id,profile)} pfp={dispPfp(m.id,profile)} size={28}/></div>)}</div>}
-      {slides.length>1&&<div className="flex justify-center gap-1.5 mt-4">{slides.map((_,k)=><span key={k} style={{width:k===i?18:6,height:6,borderRadius:99,background:k===i?"#fff":"rgba(255,255,255,.4)",transition:"width .2s"}}/>)}</div>}
+      {s.members?(
+        <div className="flex -space-x-2 mt-4">{s.members.slice(0,8).map((m)=><div key={m.id} style={{boxShadow:`0 0 0 2px ${s.ring}`,borderRadius:99,opacity:m.loggedToday?1:0.5}}><Avatar name={dispName(m.id,profile)} pfp={dispPfp(m.id,profile)} size={28}/></div>)}</div>
+      ):(<div aria-hidden style={{height:28,marginTop:16}}/>)}
+      {slides.length>1&&<div className="flex justify-center gap-1.5 mt-4">{slides.map((_,k)=><span key={k} style={{width:k===i?18:6,height:6,borderRadius:99,background:k===i?s.dot:s.dotOff,transition:"width .2s"}}/>)}</div>}
     </div>
   );
 }
