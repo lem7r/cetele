@@ -607,7 +607,7 @@ function randomInviteCode() {
 }
 app.post("/api/cohorts", requireAuth, createLimiter, (req, res) => {
   const name = cleanText(req.body.name, 24);
-  const fullName = cleanText(req.body.fullName || (name ? name + " Cohort" : ""), 40);
+  const fullName = cleanText(req.body.fullName || (name ? name + " Kohort" : ""), 40);
   if (name.length < 2) return res.status(400).json({ error: "name too short" });
   const id = "c_" + Date.now().toString(36);
   const theme = cleanText(req.body.theme, 16) || "pine";
@@ -1035,6 +1035,10 @@ app.post("/api/notifications/:id/read", requireAuth, (req, res) => {
 });
 app.post("/api/notifications/read-all", requireAuth, (req, res) => {
   db.prepare("UPDATE notifications SET read = 1 WHERE user_id = ?").run(req.userId);
+  res.json({ ok: true });
+});
+app.delete("/api/notifications/:id", requireAuth, (req, res) => {
+  db.prepare("DELETE FROM notifications WHERE id = ? AND user_id = ?").run(req.params.id, req.userId);
   res.json({ ok: true });
 });
 

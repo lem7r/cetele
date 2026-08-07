@@ -31,7 +31,7 @@ let ME=DEFAULT_ME;                 // current user id; updated via setMe on acco
 const setMe=(id)=>{ME=id;};
 
 const COHORTS={
-  sunrise:{id:"sunrise",name:"Sunrise",fullName:"Sunrise Cohort",theme:"blue",marks:284,target:350,members:[
+  sunrise:{id:"sunrise",name:"Sunrise",fullName:"Sunrise Kohort",theme:"blue",marks:284,target:350,members:[
     {id:"u_selin",name:"Selin Aydın",role:"mentor",weekPct:91,streak:34},
     {id:ME,name:"Murat",role:"mentee",weekPct:83,streak:21},
     {id:"u_emir",name:"Emir",role:"mentee",weekPct:78,streak:12},
@@ -39,7 +39,7 @@ const COHORTS={
     {id:"u_kaan",name:"Kaan",role:"mentee",weekPct:58,streak:4},
     {id:"u_lina",name:"Lina",role:"mentee",weekPct:49,streak:2},
   ]},
-  northstar:{id:"northstar",name:"Northstar",fullName:"Northstar Cohort",theme:"indigo",marks:252,target:392,members:[
+  northstar:{id:"northstar",name:"Northstar",fullName:"Northstar Kohort",theme:"indigo",marks:252,target:392,members:[
     {id:"u_yusuf",name:"Yusuf Demir",role:"mentor",weekPct:88,streak:40},
     {id:ME,name:"Murat",role:"mentor",weekPct:66,streak:21},
     {id:"u_okan",name:"Okan",role:"mentee",weekPct:81,streak:14,loggedToday:true,trend:5},
@@ -48,7 +48,7 @@ const COHORTS={
     {id:"u_zeynep",name:"Zeynep",role:"mentee",weekPct:44,streak:5,loggedToday:true,trend:-2},
     {id:"u_ferda",name:"Ferda",role:"mentee",weekPct:36,streak:0,loggedToday:false,trend:-10},
   ]},
-  horizon:{id:"horizon",name:"Horizon",fullName:"Horizon Cohort",theme:"violet",marks:318,target:490,members:[
+  horizon:{id:"horizon",name:"Horizon",fullName:"Horizon Kohort",theme:"violet",marks:318,target:490,members:[
     {id:ME,name:"Murat",role:"mentor",weekPct:58,streak:21},
     {id:"u_ayse",name:"Ayşe",role:"mentee",weekPct:88,streak:19,loggedToday:true,trend:4},
     {id:"u_derya",name:"Derya Koç",role:"mentee",weekPct:80,streak:15,loggedToday:true,trend:2},
@@ -76,7 +76,7 @@ const fmtAgoLabel=(m)=>{const s=fmtAgo(m);return s==="just now"?s:`${s} ago`;};
 const inviteCode=(id)=>{const c=COHORTS[id];if(!c)return"";if(c.inviteCode)return c.inviteCode;if(API_BASE)return"";const base=(c.name||"cohort").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8)||"COHORT";return `${base}-${100+(hash(id)%900)}`;};
 const cohortByCode=(code)=>{const q=(code||"").trim().toLowerCase();return cohortIds().find((id)=>inviteCode(id).toLowerCase()===q);};
 const DEFAULT_SUBS=["sunrise","northstar","horizon"];
-const cohortName=(id)=>COHORTS[id]?.name||"Cohort";
+const cohortName=(id)=>COHORTS[id]?.name||"Kohort";
 
 const myRoleIn=(cid)=>COHORTS[cid]?.members.find((m)=>m.id===ME)?.role;
 const mentorCohorts=()=>Object.keys(COHORTS).filter((cid)=>myRoleIn(cid)==="mentor");
@@ -109,7 +109,7 @@ const dispPfp=(id,profile)=>id===ME?profile.avatar:null;
 
 const VIS={
   private:{label:"Just me",Icon:Lock},
-  cohort:{label:"My cohort",Icon:Users},
+  cohort:{label:"My Kohort",Icon:Users},
   mentors:{label:"Mentors only",Icon:GraduationCap},
   people:{label:"Specific Friends",Icon:UserPlus},
   everyone:{label:"Everyone",Icon:Globe},
@@ -138,7 +138,7 @@ const SEED_FEED=[
   {id:"f3",who:"u_lina",kind:"comeback",goal:"Workout",detail:"back on track after a rough week",mins:75,cheers:8,cheered:true},
   {id:"f4",who:"u_selin",kind:"cheer",goal:null,detail:"“Proud of how this week is shaping up, everyone 👏”",mins:90,cheers:6,cheered:false},
   {id:"f5",who:"u_deniz",kind:"log",goal:"Gratitude note",detail:"logged today's entry",mins:130,cheers:2,cheered:false},
-  {id:"f6",who:"u_kaan",kind:"milestone",goal:"Reading",detail:"finished his first book of the cohort",mins:180,cheers:9,cheered:false},
+  {id:"f6",who:"u_kaan",kind:"milestone",goal:"Reading",detail:"finished his first book of the Kohort",mins:180,cheers:9,cheered:false},
 ];
 const WALL_SEED={u_murat:[{id:"ws1",from:"u_selin",text:"Your consistency is contagious — the whole crew feels it."},{id:"ws2",from:"u_yusuf",text:"Proud of how you showed up this week. Keep the tally going."}],u_emir:[{id:"ws3",from:"u_selin",text:"Your consistency is contagious. Keep going."}],u_lina:[{id:"ws4",from:ME,text:"Welcome back! One day at a time 💪"}]};
 const MILESTONES=[7,14,30,60,100,200,365];
@@ -384,6 +384,7 @@ const api={
   async loadNotifications(){if(!API_BASE)return null;try{const r=await apiFetch(`${API_BASE}/api/notifications`);if(!r.ok)return null;return await r.json();}catch{return null;}},
   markNotifRead(id){if(!API_BASE)return;apiFetch(`${API_BASE}/api/notifications/${id}/read`,{method:"POST"}).catch(()=>{});},
   markAllNotifRead(){if(!API_BASE)return;apiFetch(`${API_BASE}/api/notifications/read-all`,{method:"POST"}).catch(()=>{});},
+  dismissNotif(id){if(!API_BASE)return;apiFetch(`${API_BASE}/api/notifications/${id}`,{method:"DELETE"}).catch(()=>{});},
   // ----- goal CRUD (server source of record) -----
   async createGoal(spec){const r=await apiFetch(`${API_BASE}/api/goals`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(spec)});const j=await r.json();if(!r.ok)throw new Error(j.error||"Could not create goal");return j;},
   async updateGoal(id,spec){const r=await apiFetch(`${API_BASE}/api/goals/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(spec)});const j=await r.json();if(!r.ok)throw new Error(j.error||"Could not update goal");return j;},
@@ -499,6 +500,14 @@ function EmptyState({icon:Ic,title,body,action,onAction,soft}){
     </div>
   );
 }
+// Only renders its chart once the box has a real measured width — prevents recharts' width(-1) warning on first paint.
+function ChartFrame({height,style,children}){
+  const ref=useRef(null);const [w,setW]=useState(0);
+  useEffect(()=>{const el=ref.current;if(!el)return;const upd=()=>setW(el.clientWidth||0);upd();
+    let ro;if(typeof ResizeObserver!=="undefined"){ro=new ResizeObserver(upd);ro.observe(el);}
+    return ()=>{if(ro)ro.disconnect();};},[]);
+  return <div ref={ref} style={{height,width:"100%",...style}}>{w>0?children:null}</div>;
+}
 function StreakBadge({n,small}){
   return <span className="inline-flex items-center gap-1 font-semibold rounded-full" style={{color:STREAK,background:STREAK_SOFT,fontSize:small?11:12.5,padding:small?"2px 7px":"3px 9px"}}><Flame size={small?12:14} style={{fill:"#fed7aa"}}/> {n}</span>;
 }
@@ -531,8 +540,8 @@ function CohortDropdown({ids,activeId,onSelect,onJoinOpen,onCreateOpen}){
               <div className="flex-1"><div className="flex items-center gap-2"><span className="font-semibold" style={{fontSize:14,color:on?PINE_DEEP:INK}}>{cc.fullName}</span><RoleTag role={myRoleIn(id)} small/></div><div style={{fontSize:11.5,color:on?PINE:INK3}}>{cc.members.length} members</div></div>
               {on&&<Check size={17} style={{color:PINE}} strokeWidth={3}/>}
             </button>);})}
-          {onJoinOpen&&<button onClick={()=>{setOpen(false);onJoinOpen();}} className="w-full flex items-center gap-3 px-4 py-3 text-left"><div className="flex items-center justify-center rounded-lg" style={{width:30,height:30,background:SUNKEN}}><Plus size={15} style={{color:INK2}}/></div><span className="font-semibold" style={{fontSize:14,color:INK2}}>Join a cohort</span></button>}
-          {onCreateOpen&&<button onClick={()=>{setOpen(false);onCreateOpen();}} className="w-full flex items-center gap-3 px-4 py-3 text-left" style={{borderTop:`1px solid ${BORDER}`}}><div className="flex items-center justify-center rounded-lg" style={{width:30,height:30,background:PINE_SOFT}}><Sparkles size={15} style={{color:PINE_DEEP}}/></div><span className="font-semibold" style={{fontSize:14,color:PINE_DEEP}}>Create a cohort</span></button>}
+          {onJoinOpen&&<button onClick={()=>{setOpen(false);onJoinOpen();}} className="w-full flex items-center gap-3 px-4 py-3 text-left"><div className="flex items-center justify-center rounded-lg" style={{width:30,height:30,background:SUNKEN}}><Plus size={15} style={{color:INK2}}/></div><span className="font-semibold" style={{fontSize:14,color:INK2}}>Join a Kohort</span></button>}
+          {onCreateOpen&&<button onClick={()=>{setOpen(false);onCreateOpen();}} className="w-full flex items-center gap-3 px-4 py-3 text-left" style={{borderTop:`1px solid ${BORDER}`}}><div className="flex items-center justify-center rounded-lg" style={{width:30,height:30,background:PINE_SOFT}}><Sparkles size={15} style={{color:PINE_DEEP}}/></div><span className="font-semibold" style={{fontSize:14,color:PINE_DEEP}}>Create a Kohort</span></button>}
         </div>
       </>)}
     </div>
@@ -636,8 +645,7 @@ function MenteeRow({m,onOpenMember,onNudge,nudged}){
   );
 }
 function PulseStat({label,value,tone}){const col=tone==="risk"?CHEER:tone==="warn"?STREAK:PINE;return <div className="flex-1 text-center"><div style={{fontFamily:FD,fontSize:23,fontWeight:600,color:col,lineHeight:1}}>{value}</div><div style={{fontSize:10.5,color:INK3,marginTop:3}}>{label}</div></div>;}
-function MentorScreen({cohorts,goals,onOpenMentee,onOpenGoal,onAddGoal,onNudge,nudged}){
-  const [activeId,setActiveId]=useState(cohorts[0]);
+function MentorScreen({cohorts,goals,activeId,onSelect,onOpenMentee,onOpenGoal,onAddGoal,onNudge,nudged}){
   const safe=cohorts.includes(activeId)?activeId:cohorts[0];
   const c=COHORTS[safe];
   const mentees=c.members.filter((m)=>m.role==="mentee").map((m)=>({...m,...riskOf(m)}));
@@ -648,10 +656,10 @@ function MentorScreen({cohorts,goals,onOpenMentee,onOpenGoal,onAddGoal,onNudge,n
   return (
     <div className="px-4 pt-3 pb-28">
       <Eyebrow>Mentor dashboard</Eyebrow>
-      <CohortDropdown ids={cohorts} activeId={safe} onSelect={setActiveId}/>
+      <CohortDropdown ids={cohorts} activeId={safe} onSelect={onSelect}/>
 
       <div className="rounded-2xl p-4 mb-5" style={{background:CARD,border:`1px solid ${BORDER}`,borderTop:`3px solid ${th.dot}`,boxShadow:"0 1px 2px rgba(28,25,23,.04)"}}>
-        <div className="flex items-center justify-between mb-2"><span className="font-bold uppercase" style={{fontSize:11,letterSpacing:1.4,color:INK3}}>Cohort pulse</span><span style={{fontFamily:FD,fontSize:18,fontWeight:600,color:th.accent}}>{cp}%</span></div>
+        <div className="flex items-center justify-between mb-2"><span className="font-bold uppercase" style={{fontSize:11,letterSpacing:1.4,color:INK3}}>Kohort pulse</span><span style={{fontFamily:FD,fontSize:18,fontWeight:600,color:th.accent}}>{cp}%</span></div>
         <div className="h-3 rounded-full overflow-hidden mb-4" style={{background:SUNKEN}}><div className="h-full rounded-full" style={{width:`${cp}%`,background:`linear-gradient(90deg, ${th.accent}, ${th.dot})`}}/></div>
         <div className="flex"><PulseStat label="On track" value={onTrack.length}/><div style={{width:1,background:BORDER}}/><PulseStat label="Need attention" value={atRisk.length} tone="risk"/><div style={{width:1,background:BORDER}}/><PulseStat label="Logged today" value={`${loggedCount}/${mentees.length}`}/></div>
       </div>
@@ -673,15 +681,15 @@ function MentorScreen({cohorts,goals,onOpenMentee,onOpenGoal,onAddGoal,onNudge,n
       {onTrack.length>0&&(<><Eyebrow>On track</Eyebrow><div className="space-y-2.5 mb-6">{onTrack.map((m)=><MenteeRow key={m.id} m={m} onOpenMember={(id)=>onOpenMentee(safe,id)} onNudge={onNudge} nudged={nudged}/>)}</div></>)}
       </>)}
 
-      <div className="flex items-center justify-between mb-1"><Eyebrow style={{margin:0}}>Cohort goals</Eyebrow><button onClick={()=>onAddGoal(safe)} className="inline-flex items-center gap-1 rounded-full font-semibold" style={{fontSize:12.5,color:PINE_DEEP,background:PINE_SOFT,padding:"5px 11px"}}><Plus size={14}/> Add goal</button></div>
-      <p style={{fontSize:12,color:INK3,marginBottom:10}}>{mentees.length?"Tap a goal to compare every member's progress.":"Set the shared goals for this cohort now — members log against them once they join."}</p>
+      <div className="flex items-center justify-between mb-1 mt-7"><Eyebrow style={{margin:0}}>Kohort goals</Eyebrow><button onClick={()=>onAddGoal(safe)} className="inline-flex items-center gap-1 rounded-full font-semibold" style={{fontSize:12.5,color:PINE_DEEP,background:PINE_SOFT,padding:"5px 11px"}}><Plus size={14}/> Add goal</button></div>
+      <p style={{fontSize:12,color:INK3,marginBottom:10}}>{mentees.length?"Tap a goal to compare every member's progress.":"Set the shared goals for this Kohort now — members log against them once they join."}</p>
       <div className="space-y-2.5">
         {cohortGoals.map((g)=>{const denom=Math.max(mentees.length,1);const met=mentees.length?adherenceFor(g.id,mentees.length):0;const pp=Math.round((met/denom)*100);const Ic=iconOf(g.icon);return(
           <button key={g.id} onClick={()=>mentees.length&&onOpenGoal(safe,g.id)} className="w-full text-left rounded-2xl p-3.5" style={{background:CARD,border:`1px solid ${BORDER}`}}>
             <div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2 min-w-0"><Ic size={17} style={{color:INK2,flexShrink:0}}/><span className="font-semibold" style={{fontSize:14,color:INK,overflowWrap:"anywhere"}}>{g.title}</span></div><div className="flex items-center gap-1.5 shrink-0"><span className="font-semibold" style={{fontSize:13,color:mentees.length?(pp>=70?PINE:STREAK):INK3}}>{mentees.length?`${met}/${mentees.length}`:"—"}</span>{mentees.length>0&&<ChevronRight size={16} style={{color:INK3}}/>}</div></div>
             <div className="h-2 rounded-full overflow-hidden" style={{background:SUNKEN}}><div className="h-full rounded-full" style={{width:`${mentees.length?pp:0}%`,background:pp>=70?PINE:"#e7a33e"}}/></div>
           </button>);})}
-        {cohortGoals.length===0&&<EmptyState icon={Target} title="No cohort goals yet" body={`Tap Add goal to set the first shared goal for ${c.name}.`}/>}
+        {cohortGoals.length===0&&<EmptyState icon={Target} title="No Kohort goals yet" body={`Tap Add goal to set the first shared goal for ${c.name}.`}/>}
       </div>
     </div>
   );
@@ -694,10 +702,10 @@ function NoCohortsScreen({onJoinOpen,onCreateOpen}){
       <div className="flex items-center justify-center rounded-3xl mb-5" style={{width:96,height:96,background:PINE_SOFT}}>
         <TallyMarks count={7} color={PINE} scale={1.3}/>
       </div>
-      <h2 style={{fontFamily:FD,fontSize:26,fontWeight:600,color:INK,letterSpacing:-0.5}}>You're not in a cohort yet</h2>
-      <p style={{fontSize:14,color:INK2,lineHeight:1.55,marginTop:10,maxWidth:300}}>Cohorts are where it happens — a mentor sets shared goals, and everyone tallies their progress and cheers each other on.</p>
-      <button onClick={onJoinOpen} className="mt-7 rounded-2xl font-semibold flex items-center justify-center gap-2" style={{height:52,width:"100%",maxWidth:300,background:PINE,color:"#fff",fontSize:15}}><Compass size={18}/> Join a cohort</button>
-      {onCreateOpen&&<button onClick={onCreateOpen} className="mt-2.5 rounded-2xl font-semibold flex items-center justify-center gap-2" style={{height:52,width:"100%",maxWidth:300,background:PINE_SOFT,color:PINE_DEEP,fontSize:15,border:`1px solid ${MINT_BORDER}`}}><Sparkles size={18}/> Create a cohort</button>}
+      <h2 style={{fontFamily:FD,fontSize:26,fontWeight:600,color:INK,letterSpacing:-0.5}}>You're not in a Kohort yet</h2>
+      <p style={{fontSize:14,color:INK2,lineHeight:1.55,marginTop:10,maxWidth:300}}>Kohorts are where it happens — a mentor sets shared goals, and everyone tallies their progress and cheers each other on.</p>
+      <button onClick={onJoinOpen} className="mt-7 rounded-2xl font-semibold flex items-center justify-center gap-2" style={{height:52,width:"100%",maxWidth:300,background:PINE,color:"#fff",fontSize:15}}><Compass size={18}/> Join a Kohort</button>
+      {onCreateOpen&&<button onClick={onCreateOpen} className="mt-2.5 rounded-2xl font-semibold flex items-center justify-center gap-2" style={{height:52,width:"100%",maxWidth:300,background:PINE_SOFT,color:PINE_DEEP,fontSize:15,border:`1px solid ${MINT_BORDER}`}}><Sparkles size={18}/> Create a Kohort</button>}
       <div className="flex items-center gap-1.5 mt-3" style={{color:INK3}}><Ticket size={14}/><span style={{fontSize:12.5}}>Have an invite code? Enter it when you join.</span></div>
       <div className="mt-8 rounded-2xl p-4 flex items-start gap-3" style={{background:SUNKEN,maxWidth:330}}>
         <Sparkles size={18} style={{color:PINE,marginTop:1}}/>
@@ -709,7 +717,7 @@ function NoCohortsScreen({onJoinOpen,onCreateOpen}){
 
 /* ---------- Tally (main tab) ---------- */
 function CohortGroup({cohortId,goals,expanded,onToggle,selectedIso,onSetValue,onToggleGoal,onEdit,onDelete,onOpenGoal}){
-  const th=themeOf(cohortId);const c=COHORTS[cohortId];const name=(c&&c.name)||"Cohort";
+  const th=themeOf(cohortId);const c=COHORTS[cohortId];const name=(c&&c.name)||"Kohort";
   const done=goals.filter((g)=>metOnDate(g,selectedIso)).length;
   const dayWord=selectedIso===TODAY_ISO?"today":fmtMD(selectedIso);
   return (
@@ -768,13 +776,13 @@ function CeteleScreen({goals,subscribed,onSetValue,onToggle,onEditVis,onEdit,onD
       {allCaughtUp&&(
         <div className="flex items-center gap-2.5 rounded-2xl p-3.5 mb-5" style={{background:MINT,border:`1px solid ${MINT_BORDER}`}}>
           <div className="flex items-center justify-center rounded-full" style={{width:34,height:34,background:PINE}}><Sparkles size={18} color="#fff"/></div>
-          <div><div className="font-semibold" style={{fontSize:14,color:PINE_DEEP}}>All caught up for {dayLabel}</div><div style={{fontSize:12,color:PINE}}>Every goal logged. Your cohorts can feel it.</div></div>
+          <div><div className="font-semibold" style={{fontSize:14,color:PINE_DEEP}}>All caught up for {dayLabel}</div><div style={{fontSize:12,color:PINE}}>Every goal logged. Your Kohorts can feel it.</div></div>
         </div>
       )}
-      <Eyebrow>Cohort goals</Eyebrow>
-      <p style={{fontSize:12,color:INK3,marginTop:-4,marginBottom:10}}>Set by your cohorts' mentors. Tap a cohort to open its goals.</p>
+      <Eyebrow>Kohort goals</Eyebrow>
+      <p style={{fontSize:12,color:INK3,marginTop:-4,marginBottom:10}}>Set by your Kohorts' mentors. Tap a Kohort to open its goals.</p>
       {cohortOrder.length===0?(
-        <div className="rounded-2xl p-5 text-center mb-6" style={{border:`2px dashed ${BORDER2}`}}><Users size={22} style={{color:INK3}} className="mx-auto mb-2"/><p style={{fontSize:13,color:INK3}}>Join a cohort to see shared goals here.</p></div>
+        <div className="rounded-2xl p-5 text-center mb-6" style={{border:`2px dashed ${BORDER2}`}}><Users size={22} style={{color:INK3}} className="mx-auto mb-2"/><p style={{fontSize:13,color:INK3}}>Join a Kohort to see shared goals here.</p></div>
       ):(
         <div className="space-y-2.5 mb-6">{cohortOrder.map((cid)=>(
           <CohortGroup key={cid} cohortId={cid} goals={goalsByCohort[cid]} expanded={!!(cohortExpanded&&cohortExpanded[cid])} onToggle={()=>onToggleCohort(cid)} selectedIso={selectedIso} onSetValue={onSetValue} onToggleGoal={onToggle} onEdit={onEdit} onDelete={onDelete} onOpenGoal={onOpenGoal}/>
@@ -793,24 +801,54 @@ function CeteleScreen({goals,subscribed,onSetValue,onToggle,onEditVis,onEdit,onD
 }
 
 /* ---------- Feed ---------- */
+// Feed hero: a swipeable "today" pulse — slide 0 is your total (personal + all Kohorts),
+// then one slide per Kohort, tinted to its theme. Swipe or use the arrows. Always today, live.
+function PulseCarousel({subscribed,marksToday,profile}){
+  const [idx,setIdx]=useState(0);
+  const kohorts=subscribed.map((id)=>COHORTS[id]).filter(Boolean);
+  const slides=[
+    {key:"__all",total:true,name:"Everything",marks:marksToday,
+     sub:`you + ${subscribed.length} ${subscribed.length===1?"Kohort":"Kohorts"}`,
+     bg:"linear-gradient(140deg, #0b4a3b, #0f766e)",ring:"#0b4a3b",tally:"#a7f3d0",members:null},
+    ...kohorts.map((c)=>{const th=THEMES[c.theme||"pine"];const logged=c.members.filter((m)=>m.loggedToday).length;
+      return {key:c.id,total:false,name:c.fullName,marks:logged,
+        sub:`of ${c.members.length} logged today`,
+        bg:`linear-gradient(140deg, ${th.accent}, ${th.dot})`,ring:th.accent,tally:"#ffffff",members:c.members};}),
+  ];
+  const i=Math.min(idx,slides.length-1);const s=slides[i];
+  const startX=useRef(null);
+  const onTS=(e)=>{startX.current=e.touches[0].clientX;};
+  const onTE=(e)=>{if(startX.current==null)return;const dx=e.changedTouches[0].clientX-startX.current;if(Math.abs(dx)>40)setIdx((k)=>Math.max(0,Math.min(slides.length-1,k+(dx<0?1:-1))));startX.current=null;};
+  const go=(d)=>setIdx((k)=>Math.max(0,Math.min(slides.length-1,k+d)));
+  return (
+    <div className="rounded-3xl p-5 mb-4 text-white relative overflow-hidden" style={{background:s.bg,transition:"background .25s"}} onTouchStart={onTS} onTouchEnd={onTE}>
+      <div className="absolute -right-6 -top-8 opacity-15"><Sparkles size={120}/></div>
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-medium" style={{fontSize:13,opacity:0.9,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.total?"Today · your whole tally":`${s.name} · today`}</p>
+        {slides.length>1&&<div className="flex items-center gap-1.5 shrink-0">
+          <button onClick={()=>go(-1)} disabled={i===0} aria-label="Previous" className="flex items-center justify-center rounded-full" style={{width:27,height:27,background:"rgba(255,255,255,.18)",opacity:i===0?0.35:1}}><ChevronLeft size={16}/></button>
+          <button onClick={()=>go(1)} disabled={i===slides.length-1} aria-label="Next" className="flex items-center justify-center rounded-full" style={{width:27,height:27,background:"rgba(255,255,255,.18)",opacity:i===slides.length-1?0.35:1}}><ChevronRight size={16}/></button>
+        </div>}
+      </div>
+      <div className="flex items-end gap-3 mt-1"><span style={{fontFamily:FD,fontSize:48,lineHeight:1,fontWeight:600,letterSpacing:-1.5}}>{s.marks}</span><span className="mb-1.5" style={{fontSize:13.5,opacity:0.9}}>{s.total?"marks logged":s.sub}</span></div>
+      {s.total&&<p style={{fontSize:12.5,opacity:0.8,marginTop:3}}>{s.sub}</p>}
+      <div className="mt-3"><TallyMarks count={s.marks} color={s.tally}/></div>
+      {s.members&&<div className="flex -space-x-2 mt-4">{s.members.slice(0,8).map((m)=><div key={m.id} style={{boxShadow:`0 0 0 2px ${s.ring}`,borderRadius:99,opacity:m.loggedToday?1:0.5}}><Avatar name={dispName(m.id,profile)} pfp={dispPfp(m.id,profile)} size={28}/></div>)}</div>}
+      {slides.length>1&&<div className="flex justify-center gap-1.5 mt-4">{slides.map((_,k)=><span key={k} style={{width:k===i?18:6,height:6,borderRadius:99,background:k===i?"#fff":"rgba(255,255,255,.4)",transition:"width .2s"}}/>)}</div>}
+    </div>
+  );
+}
 function FeedScreen({feed,friendFeed,friends,subscribed,onCheer,onOpenMember,onOpenSearch,onJoinOpen,onCreateOpen,marksToday,profile,feedMore,loadingMore,onLoadMore}){
   const [scope,setScope]=useState("cohort");
-  const heroId=subscribed.includes("sunrise")?"sunrise":subscribed[0];const hero=COHORTS[heroId];
   const items=scope==="cohort"?feed:friendFeed.filter((it)=>friends.includes(it.who));
   return (
     <div className="px-4 pt-3 pb-28">
       {scope==="cohort"?(
-        hero?(
-        <div className="rounded-3xl p-5 mb-4 text-white relative overflow-hidden" style={{background:`linear-gradient(140deg, ${PINE_DEEP}, ${PINE})`}}>
-          <div className="absolute -right-6 -top-8 opacity-20"><Sparkles size={120}/></div>
-          <p className="font-medium" style={{fontSize:13,opacity:0.85}}>{hero.fullName} · today</p>
-          <div className="flex items-end gap-3 mt-1"><span style={{fontFamily:FD,fontSize:48,lineHeight:1,fontWeight:600,letterSpacing:-1.5}}>{marksToday}</span><span className="mb-1.5" style={{fontSize:14,opacity:0.9}}>marks logged together</span></div>
-          <div className="mt-3"><TallyMarks count={marksToday} color="#a7f3d0"/></div>
-          <div className="flex -space-x-2 mt-4">{hero.members.map((m)=><div key={m.id} style={{boxShadow:`0 0 0 2px ${PINE_DEEP}`,borderRadius:99}}><Avatar name={dispName(m.id,profile)} pfp={dispPfp(m.id,profile)} size={30}/></div>)}<span className="ml-3 self-center" style={{fontSize:12,opacity:0.9}}>{hero.members.length} keeping each other going</span></div>
-        </div>
+        subscribed.length>0?(
+        <PulseCarousel subscribed={subscribed} marksToday={marksToday} profile={profile}/>
         ):(
         <div className="rounded-3xl p-5 mb-4 flex items-center justify-between" style={{background:CARD,border:`1px solid ${BORDER}`}}>
-          <div><p style={{fontFamily:FD,fontSize:22,fontWeight:600,color:INK,letterSpacing:-0.5}}>Your cohorts</p><p style={{fontSize:13,color:INK3,marginTop:1}}>Not in a cohort yet</p></div>
+          <div><p style={{fontFamily:FD,fontSize:22,fontWeight:600,color:INK,letterSpacing:-0.5}}>Your Kohorts</p><p style={{fontSize:13,color:INK3,marginTop:1}}>Not in a Kohort yet</p></div>
           <button onClick={onJoinOpen} className="inline-flex items-center gap-1.5 rounded-full font-semibold" style={{color:PINE_DEEP,background:PINE_SOFT,fontSize:13,padding:"7px 13px"}}><Compass size={15}/> Join</button>
         </div>
         )
@@ -821,7 +859,7 @@ function FeedScreen({feed,friendFeed,friends,subscribed,onCheer,onOpenMember,onO
         </div>
       )}
       <div className="flex rounded-full p-0.5 mb-5" style={{background:SUNKEN}}>
-        {[["cohort","Cohort"],["friends","Friends"]].map(([v,l])=>{const on=scope===v;return(
+        {[["cohort","Kohort"],["friends","Friends"]].map(([v,l])=>{const on=scope===v;return(
           <button key={v} onClick={()=>setScope(v)} className="flex-1 rounded-full font-semibold py-2" style={{fontSize:13,background:on?CARD:"transparent",color:on?PINE_DEEP:INK2,boxShadow:on?"0 1px 2px rgba(28,25,23,.06)":"none"}}>{l}</button>);})}
       </div>
       {items.length===0?(
@@ -833,16 +871,16 @@ function FeedScreen({feed,friendFeed,friends,subscribed,onCheer,onOpenMember,onO
             <button onClick={onOpenSearch} className="rounded-full font-semibold px-5 py-2.5" style={{background:PINE,color:"#fff",fontSize:13.5}}>Find people to add</button>
           </>):subscribed.length===0?(<>
             <Users size={24} style={{color:INK3}} className="mx-auto mb-2"/>
-            <p className="font-semibold" style={{fontSize:14.5,color:INK}}>No cohort yet</p>
-            <p style={{fontSize:12.5,color:INK3,marginTop:3,marginBottom:14}}>Join or create a cohort to see shared wins here and keep each other going.</p>
+            <p className="font-semibold" style={{fontSize:14.5,color:INK}}>No Kohort yet</p>
+            <p style={{fontSize:12.5,color:INK3,marginTop:3,marginBottom:14}}>Join or create a Kohort to see shared wins here and keep each other going.</p>
             <div className="flex items-center justify-center gap-2">
-              <button onClick={onJoinOpen} className="rounded-full font-semibold px-5 py-2.5" style={{background:PINE,color:"#fff",fontSize:13.5}}>Join a cohort</button>
+              <button onClick={onJoinOpen} className="rounded-full font-semibold px-5 py-2.5" style={{background:PINE,color:"#fff",fontSize:13.5}}>Join a Kohort</button>
               <button onClick={onCreateOpen} className="rounded-full font-semibold px-5 py-2.5" style={{background:PINE_SOFT,color:PINE_DEEP,fontSize:13.5,border:`1px solid ${MINT_BORDER}`}}>Create one</button>
             </div>
           </>):(<>
             <Sparkles size={24} style={{color:INK3}} className="mx-auto mb-2"/>
             <p className="font-semibold" style={{fontSize:14.5,color:INK}}>Quiet for now</p>
-            <p style={{fontSize:12.5,color:INK3,marginTop:3}}>When your cohort logs, their activity shows up here.</p>
+            <p style={{fontSize:12.5,color:INK3,marginTop:3}}>When your Kohort logs, their activity shows up here.</p>
           </>)}
         </div>
       ):(<>
@@ -867,14 +905,13 @@ function FeedScreen({feed,friendFeed,friends,subscribed,onCheer,onOpenMember,onO
 }
 
 /* ---------- Cohort ---------- */
-function CohortScreen({subscribed,onOpenMember,onJoinOpen,onCreateOpen,onSettingsOpen,onLeave,profile}){
-  const [activeId,setActiveId]=useState(subscribed[0]);
+function CohortScreen({subscribed,activeId,onSelect,onOpenMember,onJoinOpen,onCreateOpen,onSettingsOpen,onLeave,profile}){
   const safe=subscribed.includes(activeId)?activeId:subscribed[0];
   const c=COHORTS[safe];const sorted=[...c.members].sort((a,b)=>b.weekPct-a.weekPct);const cp=Math.round((c.marks/c.target)*100);const mentorHere=isMentorOfCohort(safe);const th=themeOf(safe);
   return (
     <div className="px-4 pt-3 pb-28">
-      <div className="flex items-center justify-between"><Eyebrow>Your cohorts</Eyebrow>{mentorHere&&<button onClick={()=>onSettingsOpen(safe)} className="inline-flex items-center gap-1 rounded-full font-semibold" style={{fontSize:12,color:th.accent,background:th.soft,padding:"4px 10px",marginBottom:8}}><SettingsIcon size={13}/> Cohort settings</button>}</div>
-      <CohortDropdown ids={subscribed} activeId={safe} onSelect={setActiveId} onJoinOpen={onJoinOpen} onCreateOpen={onCreateOpen}/>
+      <div className="flex items-center justify-between"><Eyebrow>Your Kohorts</Eyebrow>{mentorHere&&<button onClick={()=>onSettingsOpen(safe)} className="inline-flex items-center gap-1 rounded-full font-semibold" style={{fontSize:12,color:th.accent,background:th.soft,padding:"4px 10px",marginBottom:8}}><SettingsIcon size={13}/> Kohort settings</button>}</div>
+      <CohortDropdown ids={subscribed} activeId={safe} onSelect={onSelect} onJoinOpen={onJoinOpen} onCreateOpen={onCreateOpen}/>
       <div className="rounded-2xl p-4 mb-5" style={{background:CARD,border:`1px solid ${BORDER}`,borderTop:`3px solid ${th.dot}`,boxShadow:"0 1px 2px rgba(28,25,23,.04)"}}>
         <div className="flex items-center justify-between mb-2"><span className="font-bold uppercase" style={{fontSize:11,letterSpacing:1.4,color:INK3}}>Collective tally · this week</span><span style={{fontFamily:FD,fontSize:18,fontWeight:600,color:th.accent}}>{cp}%</span></div>
         {c.description&&<p style={{fontSize:12.5,color:INK3,marginTop:-2,marginBottom:8}}>{c.description}</p>}
@@ -885,7 +922,7 @@ function CohortScreen({subscribed,onOpenMember,onJoinOpen,onCreateOpen,onSetting
       {mentorHere&&(
         <div className="flex items-start gap-2.5 rounded-2xl p-3.5 mb-4" style={{background:STREAK_SOFT,border:`1px solid #fcd9a8`}}>
           <GraduationCap size={18} style={{color:STREAK,marginTop:1}}/>
-          <div><div className="font-semibold" style={{fontSize:13.5,color:"#92400e"}}>You mentor this cohort</div><div style={{fontSize:12,color:"#b45309"}}>Open the Mentor tab for the full dashboard, or tap any member to see their history.</div></div>
+          <div><div className="font-semibold" style={{fontSize:13.5,color:"#92400e"}}>You mentor this Kohort</div><div style={{fontSize:12,color:"#b45309"}}>Open the Mentor tab for the full dashboard, or tap any member to see their history.</div></div>
         </div>
       )}
       <Eyebrow>Standings</Eyebrow>
@@ -899,7 +936,7 @@ function CohortScreen({subscribed,onOpenMember,onJoinOpen,onCreateOpen,onSetting
             <div className="text-right"><div style={{fontFamily:FD,fontWeight:600,color:INK,fontSize:16}}>{m.weekPct}%</div><div className="flex justify-end mt-0.5"><StreakBadge n={m.streak} small/></div></div>
           </button>);})}
       </div>
-      <button onClick={()=>onLeave(safe)} className="w-full mt-5 rounded-2xl py-3 font-semibold flex items-center justify-center gap-2" style={{border:`1px solid ${BORDER2}`,color:CHEER,fontSize:13.5,background:CARD}}><LogOut size={15}/> Leave {c.name} Cohort</button>
+      <button onClick={()=>onLeave(safe)} className="w-full mt-5 rounded-2xl py-3 font-semibold flex items-center justify-center gap-2" style={{border:`1px solid ${BORDER2}`,color:CHEER,fontSize:13.5,background:CARD}}><LogOut size={15}/> Leave {c.name} Kohort</button>
     </div>
   );
 }
@@ -936,32 +973,32 @@ function InsightsScreen({goals,subscribed}){
       <div className="rounded-2xl p-4 mb-4" style={{background:CARD,border:`1px solid ${BORDER}`}}>
         <div className="flex items-center justify-between mb-1"><p style={{fontFamily:FD,fontSize:15.5,fontWeight:600,color:INK}}>Progress · last 30 days</p><span style={{fontSize:12,fontWeight:700,color:PINE_DEEP}}>{avg30}% avg</span></div>
         <p style={{fontSize:12,color:INK3}} className="mb-3">Share of your goals met each day · {activeDays} active days</p>
-        <div style={{height:150}}><ResponsiveContainer width="100%" height="100%">
+        <ChartFrame height={150}><ResponsiveContainer width="100%" height="100%">
           <AreaChart data={trend30} margin={{top:4,right:4,left:-26,bottom:0}}>
             <defs><linearGradient id="g30" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={PINE} stopOpacity={0.28}/><stop offset="100%" stopColor={PINE} stopOpacity={0.02}/></linearGradient></defs>
             <CartesianGrid vertical={false} stroke={SUNKEN}/><XAxis dataKey="label" tick={{fontSize:9,fill:INK3}} axisLine={false} tickLine={false} interval={6}/><YAxis tick={{fontSize:11,fill:INK3}} axisLine={false} tickLine={false} domain={[0,100]}/>
             <Tooltip contentStyle={{borderRadius:12,border:`1px solid ${BORDER2}`,fontSize:12}} formatter={(v)=>[`${v}%`,"complete"]}/>
             <Area type="monotone" dataKey="pct" stroke={PINE} strokeWidth={2.5} fill="url(#g30)"/>
-          </AreaChart></ResponsiveContainer></div>
+          </AreaChart></ResponsiveContainer></ChartFrame>
       </div>
       <div className="rounded-2xl p-4 mb-4" style={{background:CARD,border:`1px solid ${BORDER}`}}>
         <p className="mb-1" style={{fontFamily:FD,fontSize:15.5,fontWeight:600,color:INK}}>Completion by day</p><p style={{fontSize:12,color:INK3}} className="mb-3">Share of your goals met each day this week</p>
-        <div style={{height:160}}><ResponsiveContainer width="100%" height="100%">
+        <ChartFrame height={160}><ResponsiveContainer width="100%" height="100%">
           <BarChart data={dayData} margin={{top:4,right:4,left:-22,bottom:0}}>
             <CartesianGrid vertical={false} stroke={SUNKEN}/><XAxis dataKey="day" tick={{fontSize:11,fill:INK3}} axisLine={false} tickLine={false}/><YAxis tick={{fontSize:11,fill:INK3}} axisLine={false} tickLine={false} domain={[0,100]}/>
             <Tooltip contentStyle={{borderRadius:12,border:`1px solid ${BORDER2}`,fontSize:12}} cursor={{fill:"#faf9f7"}} formatter={(v)=>[`${v}%`,"complete"]}/>
             <Bar dataKey="pct" radius={[6,6,0,0]}>{dayData.map((b,i)=><Cell key={i} fill={b.pct>=80?PINE:b.pct>=50?FRESH:"#fbbf24"}/>)}</Bar>
-          </BarChart></ResponsiveContainer></div>
+          </BarChart></ResponsiveContainer></ChartFrame>
         {bestDay.pct>0&&<p style={{fontSize:12.5,color:INK2,marginTop:8}}>Your strongest day is <span style={{fontWeight:700,color:PINE_DEEP}}>{bestDay.day}</span> — {bestDay.pct}% of goals met.</p>}
       </div>
       <div className="rounded-2xl p-4 mb-4" style={{background:CARD,border:`1px solid ${BORDER}`}}>
         <p className="mb-1" style={{fontFamily:FD,fontSize:15.5,fontWeight:600,color:INK}}>My week by goal</p><p style={{fontSize:12,color:INK3}} className="mb-3">Days the minimum was met</p>
-        <div style={{overflowX:"auto",overflowY:"hidden"}}><div style={{height:170,minWidth:goalBars.length>5?`${goalBars.length*58}px`:"100%"}}><ResponsiveContainer width="100%" height="100%">
+        <div style={{overflowX:"auto",overflowY:"hidden"}}><ChartFrame height={170} style={{minWidth:goalBars.length>5?`${goalBars.length*58}px`:"100%"}}><ResponsiveContainer width="100%" height="100%">
           <BarChart data={goalBars} margin={{top:4,right:4,left:-22,bottom:0}}>
             <CartesianGrid vertical={false} stroke={SUNKEN}/><XAxis dataKey="name" tick={{fontSize:11,fill:INK3}} axisLine={false} tickLine={false}/><YAxis tick={{fontSize:11,fill:INK3}} axisLine={false} tickLine={false} domain={[0,7]}/>
             <Tooltip contentStyle={{borderRadius:12,border:`1px solid ${BORDER2}`,fontSize:12}} cursor={{fill:"#faf9f7"}} formatter={(v)=>[`${v}/7 days`,""]} labelFormatter={(l,p)=>(p&&p[0]&&p[0].payload.full)||l}/>
             <Bar dataKey="done" radius={[6,6,0,0]}>{goalBars.map((b,i)=><Cell key={i} fill={b.done>=6?PINE:b.done>=4?FRESH:"#fbbf24"}/>)}</Bar>
-          </BarChart></ResponsiveContainer></div></div>
+          </BarChart></ResponsiveContainer></ChartFrame></div>
       </div>
       {streaks.length>0&&(<>
         <Eyebrow>Active streaks</Eyebrow>
@@ -1006,11 +1043,11 @@ function ProfileScreen({memberId,wall,onBack,onEncourage,onDeleteNote,profile,on
         <div className="flex gap-2 mt-3"><StreakBadge n={m.streak}/><span className="inline-flex items-center gap-1 rounded-full font-semibold" style={{color:PINE_DEEP,background:PINE_SOFT,fontSize:13,padding:"3px 9px"}}><Star size={14} style={{fill:"#5eead4"}}/> {m.weekPct}% this week</span></div>
       </div>
       <div className="px-4 mt-5"><div className="rounded-2xl p-4" style={{background:CARD,border:`1px solid ${BORDER}`}}>
-        <div className="flex items-center justify-between mb-3"><p className="font-semibold" style={{color:INK,fontSize:14}}>This week</p><span style={{fontSize:11,color:INK3}}>cohort goals</span></div>
+        <div className="flex items-center justify-between mb-3"><p className="font-semibold" style={{color:INK,fontSize:14}}>This week</p><span style={{fontSize:11,color:INK3}}>Kohort goals</span></div>
         {weekData==null?(
           <div className="space-y-2.5">{[0,1,2].map((i)=><div key={i} className="czshim" style={{height:14,background:SUNKEN,borderRadius:6,width:`${80-i*12}%`}}/>)}</div>
         ):weekData.length===0?(
-          <p style={{fontSize:13,color:INK3}}>{isMe?"Join a cohort to track shared goals here.":`No cohort goals you share with ${m.name.split(" ")[0]}.`}</p>
+          <p style={{fontSize:13,color:INK3}}>{isMe?"Join a Kohort to track shared goals here.":`No Kohort goals you share with ${m.name.split(" ")[0]}.`}</p>
         ):(
           <div className="space-y-3">{weekData.map((g)=>(<div key={g.id} className="flex items-center justify-between gap-3"><span className="min-w-0" style={{fontSize:13.5,color:INK2,overflowWrap:"anywhere"}}>{g.title}</span><TallyMarks count={Math.max(0,Math.min(7,g.count))} color={PINE} scale={0.85}/></div>))}</div>
         )}
@@ -1024,16 +1061,16 @@ function ProfileScreen({memberId,wall,onBack,onEncourage,onDeleteNote,profile,on
           <div className="rounded-2xl p-4" style={{background:CARD,border:`1px solid ${BORDER}`}}>
             <div className="flex mb-4"><StatCell label="Total marks" value={hist.totalMarks}/><div style={{width:1,background:BORDER}}/><StatCell label="Best streak" value={hist.bestStreak}/><div style={{width:1,background:BORDER}}/><StatCell label="Weeks active" value={hist.weeksActive}/></div>
             <p style={{fontSize:12,color:INK3}} className="mb-2">Completion · last 8 weeks</p>
-            <div style={{height:130,width:"100%"}}><ResponsiveContainer width="99%" height={130} minWidth={0}>
+            <ChartFrame height={130}><ResponsiveContainer width="100%" height="100%">
               <AreaChart data={hist.weekly} margin={{top:4,right:4,left:-26,bottom:0}}>
                 <defs><linearGradient id="h" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={PINE} stopOpacity={0.3}/><stop offset="100%" stopColor={PINE} stopOpacity={0}/></linearGradient></defs>
                 <CartesianGrid vertical={false} stroke={SUNKEN}/><XAxis dataKey="w" tick={{fontSize:10,fill:INK3}} axisLine={false} tickLine={false}/><YAxis tick={{fontSize:10,fill:INK3}} axisLine={false} tickLine={false} domain={[0,100]}/>
                 <Tooltip contentStyle={{borderRadius:12,border:`1px solid ${BORDER2}`,fontSize:12}} formatter={(v)=>[`${v}%`,"complete"]}/><Area type="monotone" dataKey="pct" stroke={PINE} strokeWidth={2.5} fill="url(#h)"/>
-              </AreaChart></ResponsiveContainer></div>
+              </AreaChart></ResponsiveContainer></ChartFrame>
           </div>
           )
         ):(
-          <div className="rounded-2xl p-5 flex items-center gap-3" style={{background:SUNKEN,border:`1px dashed ${BORDER2}`}}><Lock size={20} style={{color:INK3}}/><div><p className="font-semibold" style={{fontSize:13.5,color:INK2}}>History is mentor-only</p><p style={{fontSize:12,color:INK3}}>Only mentors of {m.name.split(" ")[0]}'s cohort can see all-time data.</p></div></div>
+          <div className="rounded-2xl p-5 flex items-center gap-3" style={{background:SUNKEN,border:`1px dashed ${BORDER2}`}}><Lock size={20} style={{color:INK3}}/><div><p className="font-semibold" style={{fontSize:13.5,color:INK2}}>History is mentor-only</p><p style={{fontSize:12,color:INK3}}>Only mentors of {m.name.split(" ")[0]}'s Kohort can see all-time data.</p></div></div>
         )}
       </div>
       {!isMe&&(
@@ -1059,7 +1096,7 @@ function ProfileScreen({memberId,wall,onBack,onEncourage,onDeleteNote,profile,on
       <div className="px-4 mt-5">
         <Eyebrow>Encouragement wall</Eyebrow>
         <div className="space-y-2.5 mb-3">
-          {notes.length===0&&<p style={{fontSize:13.5,color:INK3}}>{isMe?"When your cohort-mates write to you, it shows up here.":`Be the first to cheer ${m.name.split(" ")[0]} on.`}</p>}
+          {notes.length===0&&<p style={{fontSize:13.5,color:INK3}}>{isMe?"When your Kohort-mates write to you, it shows up here.":`Be the first to cheer ${m.name.split(" ")[0]} on.`}</p>}
           {notes.map((n,i)=>{const mine=n.from===ME;return(<div key={n.id||i} className="rounded-2xl p-3 flex gap-2.5 items-start" style={{background:CARD,border:`1px solid ${BORDER}`}}><Avatar name={dispName(n.from,profile)} pfp={dispPfp(n.from,profile)} size={32}/><div className="min-w-0 flex-1"><p className="font-semibold" style={{fontSize:12.5,color:INK}}>{dispName(n.from,profile)}</p><p style={{fontSize:13.5,color:INK2,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{n.text}</p></div>{mine&&onDeleteNote&&<button onClick={()=>onDeleteNote(memberId,n)} aria-label="Delete note" className="shrink-0 flex items-center justify-center rounded-full" style={{width:28,height:28,background:SUNKEN,color:INK3}}><Trash2 size={14}/></button>}</div>);})}
         </div>
         {!isMe&&(<div className="flex gap-2">
@@ -1110,11 +1147,11 @@ function ProfileEditScreen({profile,onSave,onBack}){
       <p style={{fontSize:11,color:INK3,marginBottom:22}}>The first tile keeps your initials.</p>
 
       <Eyebrow>Username</Eyebrow>
-      <div className="flex items-center rounded-xl px-3 mb-1.5" style={{height:48,border:`1px solid ${handleState==="ok"?MINT_BORDER:handleState==="taken"||handleState==="invalid"?"#fecdd3":BORDER2}`,background:"#fff"}}>
+      <div className="flex items-center gap-1.5 rounded-xl pl-3 pr-3 mb-1.5" style={{height:48,border:`1px solid ${handleState==="ok"?MINT_BORDER:handleState==="taken"||handleState==="invalid"?"#fecdd3":BORDER2}`,background:"#fff"}}>
         <span style={{fontFamily:FD,fontSize:16,color:INK3,marginRight:2}}>@</span>
         <input value={username} onChange={(e)=>setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,"").slice(0,20))} placeholder="username" className="flex-1 outline-none" style={{fontSize:15,color:INK,background:"transparent"}}/>
-        {handleState==="ok"&&<Check size={17} style={{color:PINE}} strokeWidth={3}/>}
-        {handleState==="taken"&&<X size={17} style={{color:CHEER}}/>}
+        {handleState==="ok"&&<Check size={17} className="shrink-0" style={{color:PINE}} strokeWidth={3}/>}
+        {handleState==="taken"&&<X size={17} className="shrink-0" style={{color:CHEER}}/>}
       </div>
       <p style={{fontSize:11.5,color:handleState==="taken"||handleState==="invalid"?CHEER:INK3,marginBottom:22,lineHeight:1.45}}>{handleState==="taken"?"That username is taken — try another.":handleState==="invalid"||handleState==="empty"?"3–20 characters · lowercase letters, numbers, underscores.":`People can find you by @${handle}.`}</p>
 
@@ -1152,7 +1189,7 @@ function VisibilityOptions({value,onChange,friends=[]}){
         {order.map((key)=>{const meta=VIS[key];const I=meta.Icon;const on=value.type===key;return(
           <button key={key} onClick={()=>onChange({...value,type:key})} className="w-full flex items-center gap-3 rounded-xl p-3 text-left" style={{background:on?PINE_SOFT:SUNKEN,border:on?`1.5px solid ${PINE}`:"1.5px solid transparent"}}>
             <I size={18} style={{color:on?PINE_DEEP:INK2}}/>
-            <div className="flex-1"><div className="font-semibold" style={{fontSize:14,color:on?PINE_DEEP:INK}}>{meta.label}</div><div style={{fontSize:11.5,color:on?PINE:INK3}}>{key==="private"?"Only you can see this goal":key==="mentors"?"Every mentor you're connected to":key==="cohort"?"Everyone in your cohort":key==="people"?"Choose from your friends list":"Anyone you're connected to"}</div></div>
+            <div className="flex-1"><div className="font-semibold" style={{fontSize:14,color:on?PINE_DEEP:INK}}>{meta.label}</div><div style={{fontSize:11.5,color:on?PINE:INK3}}>{key==="private"?"Only you can see this goal":key==="mentors"?"Every mentor you're connected to":key==="cohort"?"Everyone in your Kohort":key==="people"?"Choose from your friends list":"Anyone you're connected to"}</div></div>
             <span className="flex items-center justify-center rounded-full" style={{width:22,height:22,background:on?PINE:"transparent",border:on?"none":`2px solid ${BORDER2}`}}>{on&&<Check size={13} color="#fff" strokeWidth={3}/>}</span>
           </button>);})}
       </div>
@@ -1191,16 +1228,16 @@ function JoinSheet({onJoinCode,onClose}){
   const fmt=(raw)=>{const s=(raw||"").toUpperCase().replace(/[^A-Z0-9]/g,"");const letters=s.replace(/[0-9]/g,"").slice(0,5);const digits=s.replace(/[^0-9]/g,"").slice(0,3);return letters.length<5?letters:`${letters}-${digits}`;};
   const tryCode=async()=>{if(!code.trim()||busy)return;setBusy(true);setErr("");const e=await onJoinCode(code.trim());setBusy(false);if(e)setErr(e);};
   return (
-    <Sheet title="Join a cohort" onClose={onClose}>
+    <Sheet title="Join a Kohort" onClose={onClose}>
       <label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Invite code</label>
       <div className="flex gap-2 mt-1.5 mb-1">
         <input value={code} maxLength={9} onChange={(e)=>{setCode(fmt(e.target.value));if(err)setErr("");}} onKeyDown={(e)=>{if(e.key==="Enter")tryCode();}} placeholder="e.g. KDMWZ-482" autoCapitalize="characters" autoCorrect="off" autoComplete="off" spellCheck={false} inputMode="text" className="flex-1 rounded-xl px-3.5 outline-none" style={{height:46,border:`1px solid ${err?CHEER:BORDER2}`,fontSize:16,color:INK,background:"#fff",letterSpacing:3,fontFamily:FD,textTransform:"uppercase"}}/>
         <button disabled={!code.trim()||busy} onClick={tryCode} className="rounded-xl font-semibold px-5" style={{height:46,background:code.trim()&&!busy?PINE:SUNKEN,color:code.trim()&&!busy?"#fff":INK3,fontSize:14}}>{busy?"…":"Join"}</button>
       </div>
-      <p style={{fontSize:12,color:err?CHEER:INK3,marginBottom:18,minHeight:16}}>{err||"Ask a mentor for their cohort's invite code."}</p>
+      <p style={{fontSize:12,color:err?CHEER:INK3,marginBottom:18,minHeight:16}}>{err||"Ask a mentor for their Kohort's invite code."}</p>
       <div className="rounded-xl p-3.5 flex items-start gap-2.5" style={{background:SUNKEN}}>
         <Lock size={15} style={{color:INK2,marginTop:1}}/>
-        <p style={{fontSize:12,color:INK2,lineHeight:1.5}}>Cohorts are private. You can only join one with an invite code from someone already inside.</p>
+        <p style={{fontSize:12,color:INK2,lineHeight:1.5}}>Kohorts are private. You can only join one with an invite code from someone already inside.</p>
       </div>
     </Sheet>
   );
@@ -1219,23 +1256,23 @@ function ThemePicker({value,onChange}){
 function CohortPreview({name,theme,desc}){const t=THEMES[theme];return(
   <div className="rounded-2xl p-3.5 flex items-center gap-3" style={{background:t.soft,border:`1px solid ${t.border}`}}>
     <div className="flex items-center justify-center rounded-xl" style={{width:38,height:38,background:"#fff"}}><Users size={18} style={{color:t.accent}}/></div>
-    <div className="min-w-0"><div className="font-semibold truncate" style={{fontSize:14,color:INK}}>{name||"Your cohort"}</div><div className="truncate" style={{fontSize:11.5,color:t.accent}}>{desc||"Cohort goals will carry this color"}</div></div>
+    <div className="min-w-0"><div className="font-semibold truncate" style={{fontSize:14,color:INK}}>{name||"Your Kohort"}</div><div className="truncate" style={{fontSize:11.5,color:t.accent}}>{desc||"Kohort goals will carry this color"}</div></div>
   </div>);}
 function CreateCohortSheet({onClose,onCreate}){
   const [name,setName]=useState("");const [desc,setDesc]=useState("");const [theme,setTheme]=useState("pine");
   const clean=name.trim();const ok=clean.length>=2;const fullName=clean?`${clean} Cohort`:"";
   return (
-    <Sheet title="Create a cohort" onClose={onClose}>
+    <Sheet title="Create a Kohort" onClose={onClose}>
       <p style={{fontSize:13,color:INK3,marginTop:-6,marginBottom:14,lineHeight:1.5}}>You'll be the mentor. Set shared goals and invite members once it's created.</p>
-      <label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Cohort name</label>
+      <label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Kohort name</label>
       <input autoFocus value={name} onChange={(e)=>setName(e.target.value.slice(0,24))} placeholder="e.g. Daybreak" className="w-full rounded-xl px-3.5 mt-1.5 mb-1 outline-none" style={{height:46,border:`1px solid ${BORDER2}`,fontSize:14,color:INK,background:"#fff"}}/>
       <p style={{fontSize:12,color:INK3,marginBottom:14}}>{fullName?`Shows as “${fullName}”.`:"At least 2 characters."}</p>
       <label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Short description <span style={{color:INK3,fontWeight:400}}>(optional)</span></label>
-      <input value={desc} onChange={(e)=>setDesc(e.target.value.slice(0,60))} placeholder="What this cohort is about" className="w-full rounded-xl px-3.5 mt-1.5 mb-5 outline-none" style={{height:46,border:`1px solid ${BORDER2}`,fontSize:14,color:INK,background:"#fff"}}/>
+      <input value={desc} onChange={(e)=>setDesc(e.target.value.slice(0,60))} placeholder="What this Kohort is about" className="w-full rounded-xl px-3.5 mt-1.5 mb-5 outline-none" style={{height:46,border:`1px solid ${BORDER2}`,fontSize:14,color:INK,background:"#fff"}}/>
       <label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Theme</label>
       <div className="mt-2 mb-3"><ThemePicker value={theme} onChange={setTheme}/></div>
       <div className="mb-5"><CohortPreview name={clean} theme={theme} desc={desc.trim()}/></div>
-      <button disabled={!ok} onClick={()=>onCreate({name:clean,fullName,theme,description:desc.trim()})} className="w-full rounded-2xl py-3.5 font-semibold" style={{background:ok?PINE:SUNKEN,color:ok?"#fff":INK3,fontSize:15}}>Create cohort</button>
+      <button disabled={!ok} onClick={()=>onCreate({name:clean,fullName,theme,description:desc.trim()})} className="w-full rounded-2xl py-3.5 font-semibold" style={{background:ok?PINE:SUNKEN,color:ok?"#fff":INK3,fontSize:15}}>Create Kohort</button>
     </Sheet>
   );
 }
@@ -1251,13 +1288,13 @@ function CohortSettingsSheet({cohortId,onClose,onSave,onSetRole,onRemoveMember,o
   const members=c.members;const mentorCount=members.filter((m)=>m.role==="mentor").length;
   const copy=()=>{try{if(navigator.clipboard)navigator.clipboard.writeText(code);}catch{}setCopied(true);setTimeout(()=>setCopied(false),1200);};
   return (
-    <Sheet title="Cohort settings" onClose={onClose}>
+    <Sheet title="Kohort settings" onClose={onClose}>
       <label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Name</label>
       <input value={name} onChange={(e)=>setName(e.target.value.slice(0,24))} className="w-full rounded-xl px-3.5 mt-1.5 mb-4 outline-none" style={{height:46,border:`1px solid ${BORDER2}`,fontSize:14,color:INK,background:"#fff"}}/>
       <label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Short description</label>
-      <input value={desc} onChange={(e)=>setDesc(e.target.value.slice(0,60))} placeholder="What this cohort is about" className="w-full rounded-xl px-3.5 mt-1.5 mb-5 outline-none" style={{height:46,border:`1px solid ${BORDER2}`,fontSize:14,color:INK,background:"#fff"}}/>
+      <input value={desc} onChange={(e)=>setDesc(e.target.value.slice(0,60))} placeholder="What this Kohort is about" className="w-full rounded-xl px-3.5 mt-1.5 mb-5 outline-none" style={{height:46,border:`1px solid ${BORDER2}`,fontSize:14,color:INK,background:"#fff"}}/>
       <label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Theme</label>
-      <p style={{fontSize:12,color:INK3,marginTop:2,marginBottom:8}}>Colors this cohort's shared goals across everyone's Kohort.</p>
+      <p style={{fontSize:12,color:INK3,marginTop:2,marginBottom:8}}>Colors this Kohort's shared goals across everyone's Kohort.</p>
       <div className="mb-3"><ThemePicker value={theme} onChange={setTheme}/></div>
       <div className="mb-4"><CohortPreview name={clean} theme={theme} desc={desc.trim()}/></div>
       <button disabled={!ok||!dirty} onClick={()=>onSave(cohortId,{name:clean,fullName:`${clean} Cohort`,theme,description:desc.trim()})} className="w-full rounded-2xl py-3.5 font-semibold mb-6" style={{background:(ok&&dirty)?PINE:SUNKEN,color:(ok&&dirty)?"#fff":INK3,fontSize:15}}>Save changes</button>
@@ -1281,8 +1318,8 @@ function CohortSettingsSheet({cohortId,onClose,onSave,onSetRole,onRemoveMember,o
           </div>);})}
       </div>
 
-      <button onClick={()=>onArchive(cohortId)} className="w-full rounded-2xl py-3 font-semibold inline-flex items-center justify-center gap-2" style={{border:`1px solid ${BORDER2}`,background:CARD,color:CHEER,fontSize:14}}><Archive size={16}/> Delete cohort</button>
-      <p style={{fontSize:11.5,color:INK3,textAlign:"center",marginTop:8}}>Removes it from your cohorts. You can rejoin with the code.</p>
+      <button onClick={()=>onArchive(cohortId)} className="w-full rounded-2xl py-3 font-semibold inline-flex items-center justify-center gap-2" style={{border:`1px solid ${BORDER2}`,background:CARD,color:CHEER,fontSize:14}}><Archive size={16}/> Delete Kohort</button>
+      <p style={{fontSize:11.5,color:INK3,textAlign:"center",marginTop:8}}>Removes it from your Kohorts. You can rejoin with the code.</p>
     </Sheet>
   );
 }
@@ -1310,9 +1347,9 @@ function GoalSheet({mode,goal,defaultVis,onClose,onSave,friends=[],preset}){
         <div className="mb-4"><label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Category</label><div className="mt-1.5 rounded-xl px-3.5 py-3 flex items-center gap-2" style={{background:SUNKEN}}>{category==="cohort"?<><Users size={15} style={{color:PINE_DEEP}}/><span className="font-semibold" style={{fontSize:14,color:INK}}>{COHORTS[editing?goal.cohortId:cid]?COHORTS[editing?goal.cohortId:cid].fullName:"Cohort"}</span></>:<><Lock size={15} style={{color:INK2}}/><span className="font-semibold" style={{fontSize:14,color:INK}}>Personal</span></>}</div></div>
       ):(<>
         <label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Category</label>
-        <div className="mt-1.5 mb-2"><Seg options={[{v:"cohort",l:"Cohort",disabled:!canCreateCohort},{v:"personal",l:"Personal"}]} value={category} onChange={setCategory}/></div>
-        {!canCreateCohort&&<p style={{fontSize:11.5,color:INK3,marginBottom:14}}>You're a mentee in all your cohorts — only mentors create cohort goals.</p>}
-        {category==="cohort"&&canCreateCohort&&(<div className="mb-4 mt-2"><label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Which cohort?</label><div className="mt-1.5 space-y-2">{mentorCohorts().map((id)=>{const on=cid===id;return(<button key={id} onClick={()=>setCid(id)} className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-left" style={{background:on?PINE_SOFT:SUNKEN,border:on?`1.5px solid ${PINE}`:"1.5px solid transparent"}}><span className="font-semibold" style={{fontSize:14,color:on?PINE_DEEP:INK}}>{COHORTS[id].fullName}</span>{on&&<Check size={15} style={{color:PINE}} strokeWidth={3}/>}</button>);})}</div></div>)}
+        <div className="mt-1.5 mb-2"><Seg options={[{v:"cohort",l:"Kohort",disabled:!canCreateCohort},{v:"personal",l:"Personal"}]} value={category} onChange={setCategory}/></div>
+        {!canCreateCohort&&<p style={{fontSize:11.5,color:INK3,marginBottom:14}}>You're a mentee in all your Kohorts — only mentors create Kohort goals.</p>}
+        {category==="cohort"&&canCreateCohort&&(<div className="mb-4 mt-2"><label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Which Kohort?</label><div className="mt-1.5 space-y-2">{mentorCohorts().map((id)=>{const on=cid===id;return(<button key={id} onClick={()=>setCid(id)} className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-left" style={{background:on?PINE_SOFT:SUNKEN,border:on?`1.5px solid ${PINE}`:"1.5px solid transparent"}}><span className="font-semibold" style={{fontSize:14,color:on?PINE_DEEP:INK}}>{COHORTS[id].fullName}</span>{on&&<Check size={15} style={{color:PINE}} strokeWidth={3}/>}</button>);})}</div></div>)}
       </>)}
       <label className="font-semibold" style={{fontSize:12.5,color:INK2}}>Type</label>
       <div className="mt-1.5 mb-2"><Seg options={[{v:"binary",l:"Completion"},{v:"numeric",l:"Numeric"}]} value={type} onChange={setType}/></div>
@@ -1379,7 +1416,7 @@ function ConfirmDialog({title,body,confirmLabel,danger,onConfirm,onCancel}){
     </div>
   </div>;
 }
-function SettingsScreen({settings,onChange,subscribed,onLeave,onJoinOpen,onReset,onBack,profile,onEditProfile,onSwitchAccount,onSignOut,onReplayIntro,serverStatus,onServerChange,onTestConnection,onDeleteAccount,onShowRecovery,onTogglePush}){
+function SettingsScreen({settings,onChange,subscribed,onLeave,onJoinOpen,onReset,onBack,profile,onOpenProfile,onSwitchAccount,onSignOut,onReplayIntro,serverStatus,onServerChange,onTestConnection,onDeleteAccount,onShowRecovery,onTogglePush}){
   const [visOpen,setVisOpen]=useState(false);
   const [confirm,setConfirm]=useState(null);
   const setNotif=(k)=>onChange({...settings,notif:{...settings.notif,[k]:!settings.notif[k]}});
@@ -1388,7 +1425,7 @@ function SettingsScreen({settings,onChange,subscribed,onLeave,onJoinOpen,onReset
     ["atRisk","Streak at risk","When a streak is about to break"],
     ["cheers","Cheers on your activity","When someone cheers you on"],
     ["nudges","Nudges from mentors","When a mentor reaches out"],
-    ["newGoal","New cohort goal","When a mentor adds a shared goal"],
+    ["newGoal","New Kohort goal","When a mentor adds a shared goal"],
     ["milestones","Milestones","Books finished, streaks, comebacks"],
   ];
   const visMeta=VIS[settings.defaultVis];const VisI=visMeta.Icon;
@@ -1397,9 +1434,9 @@ function SettingsScreen({settings,onChange,subscribed,onLeave,onJoinOpen,onReset
       <button onClick={onBack} className="inline-flex items-center gap-1 font-medium mb-3" style={{color:INK2,fontSize:14}}><ChevronLeft size={18}/> Back</button>
       <h1 style={{fontFamily:FD,fontSize:26,fontWeight:600,color:INK,letterSpacing:-0.5,marginBottom:16}}>Settings</h1>
 
-      <button onClick={onEditProfile} className="w-full flex items-center gap-3 rounded-2xl p-3.5 mb-6 text-left" style={{background:CARD,border:`1px solid ${BORDER}`,boxShadow:"0 1px 2px rgba(28,25,23,.04)"}}>
+      <button onClick={onOpenProfile} className="w-full flex items-center gap-3 rounded-2xl p-3.5 mb-6 text-left" style={{background:CARD,border:`1px solid ${BORDER}`,boxShadow:"0 1px 2px rgba(28,25,23,.04)"}}>
         <Avatar name={profile.name} pfp={profile.avatar} size={52} ring={PINE}/>
-        <div className="flex-1 min-w-0"><div className="font-semibold" style={{fontFamily:FD,fontSize:18,color:INK}}>{profile.name}</div><div style={{fontSize:12.5,color:INK3}}>@{profile.username} · Edit profile</div></div>
+        <div className="flex-1 min-w-0"><div className="font-semibold" style={{fontFamily:FD,fontSize:18,color:INK}}>{profile.name}</div><div style={{fontSize:12.5,color:INK3}}>@{profile.username} · View profile</div></div>
         <ChevronRight size={18} style={{color:INK3}}/>
       </button>
 
@@ -1456,16 +1493,16 @@ function SettingsScreen({settings,onChange,subscribed,onLeave,onJoinOpen,onReset
       </GroupCard>
       <div className="mb-6"/>
 
-      <Eyebrow>Your cohorts</Eyebrow>
+      <Eyebrow>Your Kohorts</Eyebrow>
       <GroupCard>
-        {subscribed.length===0&&<SettingRow label="You're not in any cohort" sub="Join one to track shared goals" last/>}
+        {subscribed.length===0&&<SettingRow label="You're not in any Kohort" sub="Join one to track shared goals" last/>}
         {subscribed.map((id,i)=>{const c=COHORTS[id];return(
           <SettingRow key={id} icon={Users} label={c.fullName} sub={`${c.members.length} members`} last={i===subscribed.length-1} right={
             <span className="flex items-center gap-2"><RoleTag role={myRoleIn(id)} small/><button onClick={()=>setConfirm({kind:"leave",id})} className="font-semibold" style={{fontSize:12.5,color:CHEER}}>Leave</button></span>
           }/>);})}
       </GroupCard>
       <button onClick={onJoinOpen} className="w-full flex items-center gap-3 rounded-2xl px-4 mb-6" style={{minHeight:50,background:SUNKEN,border:`1px dashed ${BORDER2}`}}>
-        <div className="flex items-center justify-center rounded-lg" style={{width:30,height:30,background:"#fff"}}><Plus size={16} style={{color:PINE_DEEP}}/></div><span className="font-semibold" style={{fontSize:14,color:PINE_DEEP}}>Join a cohort</span>
+        <div className="flex items-center justify-center rounded-lg" style={{width:30,height:30,background:"#fff"}}><Plus size={16} style={{color:PINE_DEEP}}/></div><span className="font-semibold" style={{fontSize:14,color:PINE_DEEP}}>Join a Kohort</span>
       </button>
 
       <Eyebrow>Data</Eyebrow>
@@ -1488,17 +1525,17 @@ function SettingsScreen({settings,onChange,subscribed,onLeave,onJoinOpen,onReset
         <SettingRow icon={LogOut} label="Sign out" onClick={settings.server.on?onSignOut:undefined} right={settings.server.on?<ChevronRight size={18} style={{color:INK3}}/>:<SoonPill/>}/>
         <SettingRow icon={Trash2} label="Delete account" danger last onClick={()=>setConfirm({kind:"delete"})} right={<ChevronRight size={18} style={{color:CHEER}}/>}/>
       </GroupCard>
-      <p style={{fontSize:11.5,color:INK3,margin:"0 4px 26px",lineHeight:1.45}}>Switch account lets you experience Kohort as any cohort member. Secure sign-in, passwords, and sync arrive with the backend.</p>
+      <p style={{fontSize:11.5,color:INK3,margin:"0 4px 26px",lineHeight:1.45}}>Switch account lets you experience Kohort as any Kohort member. Secure sign-in, passwords, and sync arrive with the backend.</p>
 
       <div className="flex flex-col items-center text-center pt-2">
         <div className="mb-2.5"><Logo size={44}/></div>
-        <div style={{fontFamily:FD,fontSize:16,fontWeight:600,color:INK}}>Kohort 1.2.3</div>
-        <p style={{fontSize:12,color:INK3,marginTop:2}}>Made for cohorts who keep each other going.</p>
+        <div style={{fontFamily:FD,fontSize:16,fontWeight:600,color:INK}}>Kohort 1.2.4</div>
+        <p style={{fontSize:12,color:INK3,marginTop:2}}>Made for Kohorts who keep each other going.</p>
         <div className="flex items-center gap-3 mt-3" style={{fontSize:12,color:INK2}}><span className="inline-flex items-center gap-1">Terms <SoonPill/></span><span style={{color:BORDER2}}>·</span><span className="inline-flex items-center gap-1">Privacy <SoonPill/></span></div>
       </div>
 
       {confirm&&confirm.kind==="leave"&&<ConfirmDialog title={`Leave ${COHORTS[confirm.id].name}?`} body={`You'll stop seeing ${COHORTS[confirm.id].name}'s shared goals and standings. You can rejoin anytime.`} confirmLabel="Leave" danger onCancel={()=>setConfirm(null)} onConfirm={()=>{onLeave(confirm.id);setConfirm(null);}}/>}
-      {confirm&&confirm.kind==="delete"&&<ConfirmDialog title="Delete your account?" body={settings.server.on?"This permanently removes your account, goals, logs, and history. Cohort goals you created pass to a remaining member. This can't be undone.":"In demo mode this clears your local changes and restores the seed. On a real account this permanently deletes everything."} confirmLabel="Delete account" danger onCancel={()=>setConfirm(null)} onConfirm={()=>{setConfirm(null);onDeleteAccount();}}/>}
+      {confirm&&confirm.kind==="delete"&&<ConfirmDialog title="Delete your account?" body={settings.server.on?"This permanently removes your account, goals, logs, and history. Kohort goals you created pass to a remaining member. This can't be undone.":"In demo mode this clears your local changes and restores the seed. On a real account this permanently deletes everything."} confirmLabel="Delete account" danger onCancel={()=>setConfirm(null)} onConfirm={()=>{setConfirm(null);onDeleteAccount();}}/>}
       {confirm&&confirm.kind==="reset"&&<ConfirmDialog title="Reset to demo data?" body="This clears every change you've made — goals, logs, cheers, nudges, and settings — and restores the original seed." confirmLabel="Reset" danger onCancel={()=>setConfirm(null)} onConfirm={()=>{onReset();setConfirm(null);}}/>}
     </div>
   );
@@ -1521,10 +1558,10 @@ function SearchScreen({onBack,onOpenMember,subscribed,profile,friends,statusOf,o
     <div className="px-4 pt-3 pb-28">
       <button onClick={onBack} className="inline-flex items-center gap-1 font-medium mb-3" style={{color:INK2,fontSize:14}}><ChevronLeft size={18}/> Back</button>
       <h1 style={{fontFamily:FD,fontSize:26,fontWeight:600,color:INK,letterSpacing:-0.5,marginBottom:14}}>Search</h1>
-      <div className="flex items-center rounded-2xl px-3.5 mb-5" style={{height:50,background:CARD,border:`1px solid ${BORDER2}`}}>
+      <div className="flex items-center gap-2 rounded-2xl pl-3.5 pr-2.5 mb-5" style={{height:50,background:CARD,border:`1px solid ${BORDER2}`}}>
         <SearchIcon size={18} style={{color:INK3}}/>
-        <input autoFocus value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Name, @username, or cohort" className="flex-1 px-2.5 outline-none" style={{fontSize:15,color:INK,background:"transparent"}}/>
-        {q&&<button onClick={()=>setQ("")} className="flex items-center justify-center rounded-full" style={{width:24,height:24,background:SUNKEN,color:INK2}}><X size={14}/></button>}
+        <input autoFocus value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Name, @username, or Kohort" className="flex-1 px-2.5 outline-none" style={{fontSize:15,color:INK,background:"transparent"}}/>
+        {q&&<button onClick={()=>setQ("")} className="flex items-center justify-center rounded-full shrink-0" style={{width:24,height:24,background:SUNKEN,color:INK2}}><X size={14}/></button>}
       </div>
       {empty&&requests.length>0&&(<>
         <Eyebrow>Friend requests</Eyebrow>
@@ -1571,7 +1608,7 @@ function SearchScreen({onBack,onOpenMember,subscribed,profile,friends,statusOf,o
         </div>
       </>)}
       {res.cohorts.length>0&&(<>
-        <Eyebrow>{empty?"Cohorts to explore":"Cohorts"}</Eyebrow>
+        <Eyebrow>{empty?"Kohorts to explore":"Kohorts"}</Eyebrow>
         <div className="space-y-2.5">
           {res.cohorts.map((c)=>{const joined=subscribed.includes(c.id);return(
             <div key={c.id} className="flex items-center gap-3 rounded-2xl p-3.5" style={{background:CARD,border:`1px solid ${BORDER}`,boxShadow:"0 1px 2px rgba(28,25,23,.04)"}}>
@@ -1582,8 +1619,8 @@ function SearchScreen({onBack,onOpenMember,subscribed,profile,friends,statusOf,o
             </div>);})}
         </div>
       </>)}
-      {empty&&<p style={{fontSize:12.5,color:INK3,marginTop:16,lineHeight:1.5}}>Search people by name or @username, or tap a cohort above to join it.</p>}
-      {noHits&&<div className="rounded-2xl p-6 text-center" style={{border:`2px dashed ${BORDER2}`}}><SearchIcon size={22} style={{color:INK3}} className="mx-auto mb-2"/><p className="font-semibold" style={{fontSize:14,color:INK}}>No matches for “{q}”</p><p style={{fontSize:12.5,color:INK3,marginTop:2}}>Try a different name, @username, or cohort.</p></div>}
+      {empty&&<p style={{fontSize:12.5,color:INK3,marginTop:16,lineHeight:1.5}}>Search people by name or @username, or tap a Kohort above to join it.</p>}
+      {noHits&&<div className="rounded-2xl p-6 text-center" style={{border:`2px dashed ${BORDER2}`}}><SearchIcon size={22} style={{color:INK3}} className="mx-auto mb-2"/><p className="font-semibold" style={{fontSize:14,color:INK}}>No matches for “{q}”</p><p style={{fontSize:12.5,color:INK3,marginTop:2}}>Try a different name, @username, or Kohort.</p></div>}
     </div>
   );
 }
@@ -1687,12 +1724,12 @@ function AccountPicker({current,onPick,onClose}){
   const roster=accountRoster();
   return (
     <Sheet title="Switch account" onClose={onClose}>
-      <p style={{fontSize:12.5,color:INK3,marginBottom:12,lineHeight:1.5}}>See Kohort as any cohort member — your cohorts, role, mentor view, and standing all update to match. Passwords and secure sign-in arrive with the backend.</p>
+      <p style={{fontSize:12.5,color:INK3,marginBottom:12,lineHeight:1.5}}>See Kohort as any Kohort member — your Kohorts, role, mentor view, and standing all update to match. Passwords and secure sign-in arrive with the backend.</p>
       <div className="space-y-2">
         {roster.map((a)=>{const on=a.id===current;return(
           <button key={a.id} onClick={()=>onPick(a.id)} className="w-full flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left" style={{background:on?PINE_SOFT:SUNKEN,border:on?`1.5px solid ${PINE}`:"1.5px solid transparent"}}>
             <Avatar name={a.name} size={38} ring={on?PINE:undefined}/>
-            <div className="flex-1 min-w-0"><div className="font-semibold truncate" style={{fontSize:14.5,color:on?PINE_DEEP:INK}}>{a.name}</div><div style={{fontSize:11.5,color:on?PINE:INK3}}>{a.hint||"no cohort yet"}</div></div>
+            <div className="flex-1 min-w-0"><div className="font-semibold truncate" style={{fontSize:14.5,color:on?PINE_DEEP:INK}}>{a.name}</div><div style={{fontSize:11.5,color:on?PINE:INK3}}>{a.hint||"no Kohort yet"}</div></div>
             {on&&<Check size={18} style={{color:PINE}} strokeWidth={3}/>}
           </button>);})}
       </div>
@@ -1776,9 +1813,9 @@ function AuthScreen({serverUrl,onAuthed,onBackToDemo}){
 /* ---------- first-run onboarding ---------- */
 const ONBOARD_STEPS=[
   {Icon:null,title:"Welcome to Kohort",body:"A çetele is a running tally — a simple mark for each day you show up. Kohort turns that into habits you keep with other people."},
-  {Icon:Users,title:"Cohorts keep you going",body:"Join a cohort and its mentor sets shared goals. Everyone tallies their own progress and cheers each other on — reciprocity, not surveillance."},
+  {Icon:Users,title:"Kohorts keep you going",body:"Join a Kohort and its mentor sets shared goals. Everyone tallies their own progress and cheers each other on — reciprocity, not surveillance."},
   {Icon:Sparkles,title:"Two kinds of goals",body:"Mark a goal done for the day, or log an amount like pages or minutes. You can log today and the two days before it — older days lock so the tally stays honest."},
-  {Icon:ShieldCheck,title:"You choose who sees what",body:"Every personal goal carries a visibility: keep it private, share with your mentors, your cohort, specific people, or everyone."},
+  {Icon:ShieldCheck,title:"You choose who sees what",body:"Every personal goal carries a visibility: keep it private, share with your mentors, your Kohort, specific people, or everyone."},
   {Icon:Compass,title:"You're all set",body:"This is a live demo with seeded data — explore freely. When you're ready, connect your own account and server in Settings → Data source."},
 ];
 function Onboarding({onDone}){
@@ -1833,7 +1870,7 @@ function NotificationsScreen({items,requests=[],onAccept,onDecline,onOpenMember,
         <div className="flex flex-col items-center justify-center text-center" style={{paddingTop:80}}>
           <div className="flex items-center justify-center rounded-2xl mb-4" style={{width:60,height:60,background:SUNKEN}}><Bell size={26} style={{color:INK3}}/></div>
           <p style={{fontFamily:FD,fontSize:18,color:INK,fontWeight:600}}>You're all caught up</p>
-          <p style={{fontSize:13,color:INK3,marginTop:4,maxWidth:250}}>Cheers, nudges, and cohort activity will show up here.</p>
+          <p style={{fontSize:13,color:INK3,marginTop:4,maxWidth:250}}>Cheers, nudges, and Kohort activity will show up here.</p>
         </div>
       ):items.length>0&&(
         <div className="flex flex-col gap-1.5">
@@ -1863,7 +1900,7 @@ function CelebrationScreen({title,streak,onClose}){
         <div className="flex items-center justify-center rounded-full mx-auto mb-4" style={{width:84,height:84,background:STREAK_SOFT}}><Flame size={44} style={{color:STREAK}}/></div>
         <div style={{fontFamily:FD,fontSize:48,fontWeight:600,color:STREAK,letterSpacing:-1.5,lineHeight:1}}>{streak}</div>
         <div style={{fontFamily:FD,fontSize:20,fontWeight:600,color:INK,marginTop:2}}>day streak!</div>
-        <p style={{fontSize:14,color:INK2,marginTop:10,lineHeight:1.5}}>You kept <b style={{color:INK}}>{title}</b> going {streak} days straight — that's the kind of consistency the whole cohort feels.</p>
+        <p style={{fontSize:14,color:INK2,marginTop:10,lineHeight:1.5}}>You kept <b style={{color:INK}}>{title}</b> going {streak} days straight — that's the kind of consistency the whole Kohort feels.</p>
         <button onClick={onClose} className="w-full rounded-2xl font-semibold mt-6" style={{height:48,background:PINE,color:"#fff",fontSize:15}}>Keep it up</button>
       </div>
     </div>
@@ -1937,11 +1974,11 @@ function MiniTrend({series,type,dailyMin,height=48}){
     return <div className="flex items-end gap-px" style={{height}}>{series.map((s,i)=><div key={i} style={{flex:1,height:s.met?height:5,minHeight:5,borderRadius:1.5,background:s.met?PINE:BORDER2,alignSelf:"flex-end"}}/>)}</div>;
   }
   const data=series.map((s,i)=>({i,v:s.value}));const max=Math.max(dailyMin||1,...series.map((s)=>s.value),1);
-  return <div style={{height}}><ResponsiveContainer width="100%" height="100%"><AreaChart data={data} margin={{top:3,right:0,left:0,bottom:0}}>
+  return <ChartFrame height={height}><ResponsiveContainer width="100%" height="100%"><AreaChart data={data} margin={{top:3,right:0,left:0,bottom:0}}>
     <defs><linearGradient id="mtg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={PINE} stopOpacity={0.35}/><stop offset="100%" stopColor={PINE} stopOpacity={0}/></linearGradient></defs>
     {dailyMin>0&&<ReferenceLine y={dailyMin} stroke={STREAK} strokeDasharray="3 3" strokeOpacity={0.55}/>}
     <YAxis hide domain={[0,max]}/><Area type="monotone" dataKey="v" stroke={PINE} strokeWidth={2} fill="url(#mtg)" isAnimationActive={false}/>
-  </AreaChart></ResponsiveContainer></div>;
+  </AreaChart></ResponsiveContainer></ChartFrame>;
 }
 function DrillLoading({onBack,what}){
   return <div className="px-4 pt-3 pb-28"><button onClick={onBack} className="inline-flex items-center gap-1 font-medium mb-3" style={{color:INK2,fontSize:14}}><ChevronLeft size={18}/> Back</button>
@@ -1954,22 +1991,22 @@ function Trend7({series,type,unit,dailyMin}){
   const last7=(series||[]).slice(-7);
   const data=last7.map((s)=>{const dt=new Date(s.iso+"T00:00:00");return {label:`${dt.getMonth()+1}/${dt.getDate()}`,v:type==="numeric"?s.value:(s.met?1:0),value:s.value,met:s.met};});
   if(type==="binary"){
-    return <div style={{height:118}}><ResponsiveContainer width="100%" height="100%">
+    return <ChartFrame height={118}><ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{top:6,right:4,left:-32,bottom:0}}>
         <CartesianGrid vertical={false} stroke={SUNKEN}/><XAxis dataKey="label" tick={{fontSize:10,fill:INK3}} axisLine={false} tickLine={false}/><YAxis hide domain={[0,1]}/>
         <Tooltip contentStyle={{borderRadius:12,border:`1px solid ${BORDER2}`,fontSize:12}} formatter={(v)=>[v?"Done":"Missed",""]} separator=""/>
         <Bar dataKey="v" radius={[5,5,0,0]} isAnimationActive={false}>{data.map((b,i)=><Cell key={i} fill={b.met?PINE:BORDER2}/>)}</Bar>
-      </BarChart></ResponsiveContainer></div>;
+      </BarChart></ResponsiveContainer></ChartFrame>;
   }
   const max=Math.max(dailyMin||1,...data.map((d)=>d.value),1);
-  return <div style={{height:118}}><ResponsiveContainer width="100%" height="100%">
+  return <ChartFrame height={118}><ResponsiveContainer width="100%" height="100%">
     <AreaChart data={data} margin={{top:6,right:4,left:-32,bottom:0}}>
       <defs><linearGradient id="t7g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={PINE} stopOpacity={0.3}/><stop offset="100%" stopColor={PINE} stopOpacity={0.02}/></linearGradient></defs>
       <CartesianGrid vertical={false} stroke={SUNKEN}/><XAxis dataKey="label" tick={{fontSize:10,fill:INK3}} axisLine={false} tickLine={false}/><YAxis hide domain={[0,max]}/>
       {dailyMin>0&&<ReferenceLine y={dailyMin} stroke={STREAK} strokeDasharray="3 3" strokeOpacity={0.6}/>}
       <Tooltip contentStyle={{borderRadius:12,border:`1px solid ${BORDER2}`,fontSize:12}} formatter={(v)=>[`${v} ${unit||""}`.trim(),""]} separator=""/>
       <Area type="monotone" dataKey="v" stroke={PINE} strokeWidth={2.5} fill="url(#t7g)" isAnimationActive={false}/>
-    </AreaChart></ResponsiveContainer></div>;
+    </AreaChart></ResponsiveContainer></ChartFrame>;
 }
 
 /* history stats + demo length */
@@ -2030,7 +2067,7 @@ function MentorGoalHistoryScreen({data,loading,onBack}){
       <div className="rounded-2xl p-4 mb-4" style={{background:CARD,border:`1px solid ${BORDER}`}}>
         <div className="flex items-center justify-between mb-1"><p className="font-semibold" style={{fontFamily:FD,fontSize:15,fontWeight:600,color:INK}}>{numeric?`Daily ${goal.unit||"amount"}`:"7-day completion"}</p><span className="inline-flex items-center gap-1 rounded-full font-bold" style={{fontSize:11.5,padding:"2px 9px",color:up?PINE_DEEP:CHEER,background:up?MINT:CHEER_SOFT}}>{up?<TrendingUp size={12}/>:<TrendingDown size={12}/>}{up?"+":""}{st.trend}{st.trendUnit}</span></div>
         <p style={{fontSize:11.5,color:INK3,marginBottom:12}}>{wide?"Scroll sideways to explore the full range. ":""}Hover any point for the day's detail.</p>
-        <div style={{overflowX:wide?"auto":"hidden",overflowY:"hidden"}}><div style={{height:188,minWidth:innerW}}><ResponsiveContainer width="100%" height="100%">
+        <div style={{overflowX:wide?"auto":"hidden",overflowY:"hidden"}}><ChartFrame height={188} style={{minWidth:innerW}}><ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData} margin={{top:6,right:6,left:-26,bottom:0}}>
             <defs><linearGradient id="hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={PINE} stopOpacity={0.28}/><stop offset="100%" stopColor={PINE} stopOpacity={0.02}/></linearGradient></defs>
             <CartesianGrid vertical={false} stroke={SUNKEN}/>
@@ -2039,7 +2076,7 @@ function MentorGoalHistoryScreen({data,loading,onBack}){
             {numeric&&goal.dailyMin>0&&<ReferenceLine y={goal.dailyMin} stroke={STREAK} strokeDasharray="3 3" strokeOpacity={0.55}/>}
             <Tooltip contentStyle={{borderRadius:12,border:`1px solid ${BORDER2}`,fontSize:12}} formatter={(v)=>[numeric?`${v} ${goal.unit||""}`.trim():`${v}%`,numeric?"logged":"completion"]}/>
             <Area type="monotone" dataKey="v" stroke={PINE} strokeWidth={2.4} fill="url(#hg)" isAnimationActive={false}/>
-          </AreaChart></ResponsiveContainer></div></div>
+          </AreaChart></ResponsiveContainer></ChartFrame></div>
       </div>
       <Eyebrow>Statistics</Eyebrow>
       <div className="grid grid-cols-2 gap-2.5 mb-3">
@@ -2087,10 +2124,10 @@ function MentorMenteeScreen({data,loading,cohortName,onBack,onOpenGoal}){
       <Eyebrow>Goals & progress · last 7 days</Eyebrow>
       <p style={{fontSize:12,color:INK3,marginTop:-4,marginBottom:10}}>Hover the chart for each day. Tap a goal for its full history.</p>
       {all.length===0?(
-        <div className="rounded-2xl p-7 text-center" style={{border:`2px dashed ${BORDER2}`}}><Target size={22} style={{color:INK3}} className="mx-auto mb-2"/><p className="font-semibold" style={{fontSize:14,color:INK}}>Nothing to show yet</p><p style={{fontSize:12.5,color:INK3,marginTop:3}}>No cohort goals, and {member.name.split(" ")[0]} hasn't shared any personal goals with you.</p></div>
+        <div className="rounded-2xl p-7 text-center" style={{border:`2px dashed ${BORDER2}`}}><Target size={22} style={{color:INK3}} className="mx-auto mb-2"/><p className="font-semibold" style={{fontSize:14,color:INK}}>Nothing to show yet</p><p style={{fontSize:12.5,color:INK3,marginTop:3}}>No Kohort goals, and {member.name.split(" ")[0]} hasn't shared any personal goals with you.</p></div>
       ):(<>
-        <div className="flex items-center gap-1.5 mb-2.5" style={{color:INK2}}><Users size={13}/><span className="uppercase font-bold" style={{fontSize:11,letterSpacing:0.5}}>Cohort goals</span><span style={{fontSize:11,color:INK3}}>· {goals.length}</span></div>
-        {goals.length===0?<p className="mb-4" style={{fontSize:12.5,color:INK3}}>No cohort goals set yet.</p>:<div className="space-y-3 mb-6">{goals.map(card)}</div>}
+        <div className="flex items-center gap-1.5 mb-2.5" style={{color:INK2}}><Users size={13}/><span className="uppercase font-bold" style={{fontSize:11,letterSpacing:0.5}}>Kohort goals</span><span style={{fontSize:11,color:INK3}}>· {goals.length}</span></div>
+        {goals.length===0?<p className="mb-4" style={{fontSize:12.5,color:INK3}}>No Kohort goals set yet.</p>:<div className="space-y-3 mb-6">{goals.map(card)}</div>}
         <div className="flex items-center gap-1.5 mb-2.5" style={{color:INK2}}><Lock size={13}/><span className="uppercase font-bold" style={{fontSize:11,letterSpacing:0.5}}>Personal goals shared with you</span><span style={{fontSize:11,color:INK3}}>· {personalGoals.length}</span></div>
         {personalGoals.length===0?<p style={{fontSize:12.5,color:INK3}}>{member.name.split(" ")[0]} hasn't shared any personal goals with you.</p>:<div className="space-y-3">{personalGoals.map(card)}</div>}
       </>)}
@@ -2151,6 +2188,8 @@ export default function App(){
   const mentoredSubscribed=mentorCohorts().filter((id)=>subscribed.includes(id));
   const [tab,setTab]=useState(mentoredSubscribed.length?"mentor":"cetele");
   const [openMember,setOpenMember]=useState(null);
+  const [activeCohortId,setActiveCohortId]=useState(()=>{try{return (typeof window!=="undefined"&&window.localStorage)?window.localStorage.getItem("cetele:activeCohort")||null:null;}catch{return null;}});
+  const selectCohort=(id)=>{setActiveCohortId(id);try{if(id&&typeof window!=="undefined"&&window.localStorage)window.localStorage.setItem("cetele:activeCohort",id);}catch{/* private mode */}};
   const [mentorView,setMentorView]=useState(null);
   const [memberGoals,setMemberGoals]=useState({});
   const [memberWeek,setMemberWeek]=useState({});
@@ -2303,7 +2342,7 @@ export default function App(){
   };
   const openNotifs=()=>{setShowSettings(false);setEditProfile(false);setShowSearch(false);setOpenMember(null);setDetailGoalId(null);setShowNotifs(true);};
   const markAllNotifs=()=>{setNotifications((ns)=>ns.map((n)=>({...n,read:true})));api.markAllNotifRead();};
-  const dismissNotif=(id)=>setNotifications((ns)=>ns.filter((n)=>n.id!==id));
+  const dismissNotif=(id)=>{setNotifications((ns)=>ns.filter((n)=>n.id!==id));api.dismissNotif(id);};
   const NOTIF_MAX_AGE=7*1440; // auto-hide notifications older than 7 days
   const closeNotifs=()=>{setShowNotifs(false);if(notifications.some((n)=>!n.read)){markAllNotifs();}};
   const applyServer=(server)=>{setSettings((s)=>({...s,server}));Store.set(SERVER_KEY,server);setApiBase(server.on?server.url:null);if(server.on){enterServer();}else{setServerStatus(null);setAuthed(false);hydrateLocal();}};
@@ -2440,8 +2479,8 @@ export default function App(){
   const joinCohort=(id)=>{setSubscribed((s)=>s.includes(id)?s:[...s,id]);remote.joinCohort(id);setSheet(null);};
   const joinByCode=async(code)=>{
     const c=String(code||"").trim();if(!c)return "Enter an invite code.";
-    if(API_BASE){try{const r=await api.joinByCode(c);await hydrateFromServer();setSubscribed((s)=>r.cohortId&&!s.includes(r.cohortId)?[...s,r.cohortId]:s);setSheet(null);return null;}catch(e){const m=(e.message||"").toLowerCase();if(m.includes("invalid"))return "That code didn't match any cohort. Double-check it and try again.";if(m.includes("already"))return "You're already in that cohort.";return e.message||"Couldn't join — please try again.";}}
-    const id=cohortByCode(c);if(!id)return "No cohort matches that code.";if(subscribed.includes(id))return "You're already in that cohort.";joinCohort(id);return null;
+    if(API_BASE){try{const r=await api.joinByCode(c);await hydrateFromServer();setSubscribed((s)=>r.cohortId&&!s.includes(r.cohortId)?[...s,r.cohortId]:s);setSheet(null);return null;}catch(e){const m=(e.message||"").toLowerCase();if(m.includes("invalid"))return "That code didn't match any Kohort. Double-check it and try again.";if(m.includes("already"))return "You're already in that Kohort.";return e.message||"Couldn't join — please try again.";}}
+    const id=cohortByCode(c);if(!id)return "No Kohort matches that code.";if(subscribed.includes(id))return "You're already in that Kohort.";joinCohort(id);return null;
   };
   const leaveCohort=(id)=>{
     setSubscribed((s)=>s.filter((x)=>x!==id));
@@ -2453,7 +2492,7 @@ export default function App(){
       const r=await remote.createCohort({name,fullName,theme,description:description||""});
       setSheet(null);
       if(r&&r.id){await hydrateFromServer();setSubscribed((s)=>s.includes(r.id)?s:[...s,r.id]);setCohortRev((v)=>v+1);setTab("cohort");}
-      else{setToast("Couldn't create the cohort — please try again.");}
+      else{setToast("Couldn't create the Kohort — please try again.");}
       return;
     }
     const id="c_"+Date.now().toString(36);
@@ -2490,7 +2529,7 @@ export default function App(){
   };
   const resetDemo=()=>{setMe(DEFAULT_ME);setMeId(DEFAULT_ME);Store.set(ACCOUNT_KEY,null);setAuthToken(null);Store.set(AUTH_KEY,null);setAuthed(false);cohortStore.restoreSeed();cohortStore.clear();setApiBase(null);Store.set(SERVER_KEY,null);setServerStatus(null);setGoals(SEED_GOALS_PD);api.clear();setFeed(SEED_FEED);setFeedMore({cohort:false,friend:false});setCohortExpanded({});Store.set(COHORT_EXPAND_KEY,{});setWall(WALL_SEED);setSubscribed(subscribedFor(DEFAULT_ME));setNudged({});setSettings(DEFAULT_SETTINGS);setProfile(profileFor(DEFAULT_ME));setEditProfile(false);setSelectedIso(TODAY_ISO);setOpenMember(null);setSheet(null);setShowSettings(false);setShowAccounts(false);setShowSearch(false);setShowNotifs(false);setNotifications(SEED_NOTIFS);setFriendReqs(SEED_FRIEND_REQS);setCohortRev((v)=>v+1);setTab(mentorCohorts().length?"mentor":"cetele");};
 
-  const tabs=[{id:"feed",label:"Feed",icon:Home},{id:"cetele",label:"Tally",icon:Sparkles},{id:"cohort",label:"Cohort",icon:Users},...(mentoredSubscribed.length?[{id:"mentor",label:"Mentor",icon:GraduationCap}]:[]),{id:"insights",label:"Insights",icon:BarChart3}];
+  const tabs=[{id:"feed",label:"Feed",icon:Home},{id:"cetele",label:"Tally",icon:Sparkles},{id:"cohort",label:"Kohort",icon:Users},...(mentoredSubscribed.length?[{id:"mentor",label:"Mentor",icon:GraduationCap}]:[]),{id:"insights",label:"Insights",icon:BarChart3}];
   const safeTab=tabs.some((t)=>t.id===tab)?tab:"cetele";
   const noCohorts=subscribed.length===0;
   const onAuthScreen=settings.server.on&&!authed;   // sign-in takeover: hide chrome + first-run/recap overlays
@@ -2528,8 +2567,7 @@ export default function App(){
           <div className="flex items-center gap-1.5">
             <button onClick={openNotifs} aria-label="Notifications" className="flex items-center justify-center rounded-full" style={{position:"relative",width:34,height:34,color:showNotifs?PINE:INK2,background:showNotifs?PINE_SOFT:"transparent"}}><Bell size={20}/>{inboxCount>0&&<span className="flex items-center justify-center rounded-full" style={{position:"absolute",top:2,right:2,minWidth:15,height:15,padding:"0 3px",background:CHEER,color:"#fff",fontSize:9,fontWeight:800,lineHeight:1}}>{inboxCount>9?"9+":inboxCount}</span>}</button>
             <button onClick={()=>{setOpenMember(null);setEditProfile(false);setShowSettings(false);setDetailGoalId(null);setShowNotifs(false);setShowSearch(true);}} aria-label="Search" className="flex items-center justify-center rounded-full" style={{width:34,height:34,color:showSearch?PINE:INK2,background:showSearch?PINE_SOFT:"transparent"}}><SearchIcon size={20}/></button>
-            <button onClick={()=>{setOpenMember(null);setEditProfile(false);setShowSearch(false);setDetailGoalId(null);setShowNotifs(false);setShowSettings(true);}} aria-label="Settings" className="flex items-center justify-center rounded-full" style={{width:34,height:34,color:showSettings?PINE:INK2,background:showSettings?PINE_SOFT:"transparent"}}><SettingsIcon size={20}/></button>
-            <button onClick={()=>{setShowSettings(false);setEditProfile(false);setShowSearch(false);setDetailGoalId(null);setShowNotifs(false);setOpenMember(ME);}}><Avatar name={profile.name} pfp={profile.avatar} size={34} ring={PINE}/></button>
+            <button onClick={()=>{setOpenMember(null);setEditProfile(false);setShowSearch(false);setDetailGoalId(null);setShowNotifs(false);setShowSettings(true);}} aria-label="Profile &amp; settings"><Avatar name={profile.name} pfp={profile.avatar} size={34} ring={showSettings?PINE:BORDER2}/></button>
           </div>
         </header>}
 
@@ -2552,7 +2590,7 @@ export default function App(){
           {(settings.server.on&&!authed)?<AuthScreen serverUrl={settings.server.url} onAuthed={onAuthed} onBackToDemo={()=>applyServer({...settings.server,on:false})}/>
           :showNotifs?<NotificationsScreen items={notifications.filter((n)=>(n.minsAgo||0)<NOTIF_MAX_AGE)} requests={friendReqs.incoming} onAccept={acceptReq} onDecline={declineReq} onOpenMember={(id)=>{closeNotifs();setOpenMember(id);}} onBack={closeNotifs} onMarkAll={markAllNotifs} onDismiss={dismissNotif}/>
           :editProfile?<ProfileEditScreen profile={profile} onSave={async(p)=>{try{const saved=await api.patchProfile(p);setProfile((cur)=>(API_BASE&&saved)?{...cur,name:saved.name??p.name,username:saved.username??p.username,avatar:saved.avatar!==undefined?saved.avatar:p.avatar,bio:saved.bio??p.bio,nameChangesLeft:saved.nameChangesLeft??p.nameChangesLeft}:p);setEditProfile(false);}catch(e){setToast(e.message);}}} onBack={()=>setEditProfile(false)}/>
-            :showSettings?<SettingsScreen settings={settings} onChange={setSettings} subscribed={subscribed} onLeave={leaveCohort} onJoinOpen={()=>setSheet({kind:"join"})} onReset={resetDemo} onBack={()=>setShowSettings(false)} profile={profile} onEditProfile={()=>setEditProfile(true)} onSwitchAccount={()=>{if(settings.server.on){signOut();}else{setShowAccounts(true);}}} onSignOut={signOut} onReplayIntro={()=>{setShowSettings(false);setShowOnboarding(true);}} serverStatus={serverStatus} onServerChange={applyServer} onTestConnection={()=>{setServerStatus(null);api.health().then(setServerStatus);}} onDeleteAccount={deleteAccount} onShowRecovery={showRecovery} onTogglePush={togglePush}/>
+            :showSettings?<SettingsScreen settings={settings} onChange={setSettings} subscribed={subscribed} onLeave={leaveCohort} onJoinOpen={()=>setSheet({kind:"join"})} onReset={resetDemo} onBack={()=>setShowSettings(false)} profile={profile} onOpenProfile={()=>{setShowSettings(false);setOpenMember(ME);}} onSwitchAccount={()=>{if(settings.server.on){signOut();}else{setShowAccounts(true);}}} onSignOut={signOut} onReplayIntro={()=>{setShowSettings(false);setShowOnboarding(true);}} serverStatus={serverStatus} onServerChange={applyServer} onTestConnection={()=>{setServerStatus(null);api.health().then(setServerStatus);}} onDeleteAccount={deleteAccount} onShowRecovery={showRecovery} onTogglePush={togglePush}/>
             :showSearch?<SearchScreen onBack={()=>setShowSearch(false)} onOpenMember={(id)=>{setShowSearch(false);setOpenMember(id);}} subscribed={subscribed} profile={profile} friends={friends} statusOf={friendStatus} onToggleFriend={toggleFriend} requests={friendReqs.incoming} onAccept={acceptReq} onDecline={declineReq}/>
             :openMember?<ProfileScreen memberId={openMember} wall={wall} onBack={()=>setOpenMember(null)} onEncourage={encourage} onDeleteNote={deleteNote} profile={profile} onEditProfile={()=>setEditProfile(true)} statusOf={friendStatus} onToggleFriend={toggleFriend} sharedGoals={memberGoals[openMember]} weekData={memberWeek[openMember]} historyData={memberHist[openMember]}/>
             :detailGoal?<GoalDetailScreen goal={detailGoal} onBack={()=>setDetailGoalId(null)} onSetValue={setValue} onToggle={toggle} onEditVis={(id)=>setSheet({kind:"vis",goalId:id})} onEdit={(id)=>setSheet({kind:"edit",goalId:id})} onDelete={(id)=>setConfirmDelete(id)} canManage={detailGoal.category==="personal"||isMentorOfCohort(detailGoal.cohortId)}/>
@@ -2561,8 +2599,8 @@ export default function App(){
             :safeTab==="cohort"&&noCohorts?<NoCohortsScreen onJoinOpen={()=>setSheet({kind:"join"})} onCreateOpen={()=>setSheet({kind:"create"})}/>
             :safeTab==="feed"?<FeedScreen feed={feed} friendFeed={friendFeed} friends={friends} subscribed={subscribed} onCheer={cheer} onOpenMember={setOpenMember} onOpenSearch={()=>{setShowSettings(false);setEditProfile(false);setOpenMember(null);setShowSearch(true);}} onJoinOpen={()=>setSheet({kind:"join"})} onCreateOpen={()=>setSheet({kind:"create"})} marksToday={marksToday} profile={profile} feedMore={feedMore} loadingMore={feedLoadingMore} onLoadMore={loadMoreFeed}/>
             :safeTab==="cetele"?<CeteleScreen goals={goals} subscribed={subscribed} onSetValue={setValue} onToggle={toggle} onEditVis={(id)=>setSheet({kind:"vis",goalId:id})} onEdit={(id)=>setSheet({kind:"edit",goalId:id})} onDelete={(id)=>setConfirmDelete(id)} onAdd={()=>setSheet({kind:"add"})} onOpenGoal={(id)=>setDetailGoalId(id)} selectedIso={selectedIso} setSelectedIso={setSelectedIso} cohortExpanded={cohortExpanded} onToggleCohort={toggleCohortExpand}/>
-            :safeTab==="cohort"?<CohortScreen subscribed={subscribed} onOpenMember={setOpenMember} onJoinOpen={()=>setSheet({kind:"join"})} onCreateOpen={()=>setSheet({kind:"create"})} onSettingsOpen={(id)=>setSheet({kind:"cohortSettings",id})} onLeave={(id)=>setConfirmLeave(id)} profile={profile}/>
-            :safeTab==="mentor"?<MentorScreen cohorts={mentoredSubscribed} goals={goals} onOpenMentee={openMenteeView} onOpenGoal={openGoalView} onAddGoal={(cid)=>setSheet({kind:"add",preset:{category:"cohort",cohortId:cid}})} onNudge={(id)=>setSheet({kind:"nudge",memberId:id})} nudged={nudged}/>
+            :safeTab==="cohort"?<CohortScreen subscribed={subscribed} activeId={activeCohortId} onSelect={selectCohort} onOpenMember={setOpenMember} onJoinOpen={()=>setSheet({kind:"join"})} onCreateOpen={()=>setSheet({kind:"create"})} onSettingsOpen={(id)=>setSheet({kind:"cohortSettings",id})} onLeave={(id)=>setConfirmLeave(id)} profile={profile}/>
+            :safeTab==="mentor"?<MentorScreen cohorts={mentoredSubscribed} goals={goals} activeId={activeCohortId} onSelect={selectCohort} onOpenMentee={openMenteeView} onOpenGoal={openGoalView} onAddGoal={(cid)=>setSheet({kind:"add",preset:{category:"cohort",cohortId:cid}})} onNudge={(id)=>setSheet({kind:"nudge",memberId:id})} nudged={nudged}/>
             :<InsightsScreen goals={goals} subscribed={subscribed}/>}
         </main>
 
@@ -2587,8 +2625,8 @@ export default function App(){
       {recap&&!onAuthScreen&&<RecapScreen stats={recap} onClose={()=>setRecap(null)}/>}
       {celebration&&<CelebrationScreen title={celebration.title} streak={celebration.streak} onClose={()=>setCelebration(null)}/>}
       {toast&&<div className="fixed left-0 right-0 flex justify-center px-4" style={{bottom:96,zIndex:80,pointerEvents:"none"}}><div className="rounded-full px-4 py-2.5 flex items-center gap-2" style={{background:INK,color:"#fff",fontSize:13,fontWeight:600,maxWidth:360,boxShadow:E2}}><AlertCircle size={15} style={{color:"#fca5a5"}}/>{toast}</div></div>}
-      {confirmArchive&&<ConfirmDialog title="Delete this cohort?" body="This permanently removes the cohort and its shared goals for every member. This can't be undone." confirmLabel="Delete" danger onCancel={()=>setConfirmArchive(null)} onConfirm={()=>archiveCohort(confirmArchive)}/>}
-      {confirmLeave&&(()=>{const c=COHORTS[confirmLeave];const last=c&&c.members&&c.members.length<=1;return <ConfirmDialog title={`Leave ${c?c.name:"cohort"}?`} body={last?"You're the last member, so this cohort and its shared goals will be permanently deleted. This can't be undone.":"You'll stop seeing its shared goals and standings. You can rejoin later with the invite code."} confirmLabel={last?"Leave & delete":"Leave"} danger onCancel={()=>setConfirmLeave(null)} onConfirm={()=>{leaveCohort(confirmLeave);setConfirmLeave(null);}}/>;})()}
+      {confirmArchive&&<ConfirmDialog title="Delete this Kohort?" body="This permanently removes the Kohort and its shared goals for every member. This can't be undone." confirmLabel="Delete" danger onCancel={()=>setConfirmArchive(null)} onConfirm={()=>archiveCohort(confirmArchive)}/>}
+      {confirmLeave&&(()=>{const c=COHORTS[confirmLeave];const last=c&&c.members&&c.members.length<=1;return <ConfirmDialog title={`Leave ${c?c.name:"cohort"}?`} body={last?"You're the last member, so this Kohort and its shared goals will be permanently deleted. This can't be undone.":"You'll stop seeing its shared goals and standings. You can rejoin later with the invite code."} confirmLabel={last?"Leave & delete":"Leave"} danger onCancel={()=>setConfirmLeave(null)} onConfirm={()=>{leaveCohort(confirmLeave);setConfirmLeave(null);}}/>;})()}
       {confirmDelete&&<ConfirmDialog title="Delete this goal?" body="Its weekly history and streak will be removed. This can't be undone." confirmLabel="Delete" danger onCancel={()=>setConfirmDelete(null)} onConfirm={()=>{deleteGoal(confirmDelete);setConfirmDelete(null);setDetailGoalId(null);}}/>}
     </div>
   );

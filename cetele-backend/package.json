@@ -1,6 +1,6 @@
 {
   "name": "cetele-backend",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "private": true,
   "description": "Çetele API — users, cohorts, goals, and per-day logs.",
   "main": "server.js",
