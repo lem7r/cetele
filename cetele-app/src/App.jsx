@@ -527,7 +527,7 @@ function RoleTag({role,small}){
   const mentor=role==="mentor";
   return <span className="inline-flex items-center gap-1 rounded-full font-semibold" style={{fontSize:small?10:11,padding:small?"1px 7px":"2px 8px",color:mentor?STREAK:INK2,background:mentor?STREAK_SOFT:SUNKEN}}>{mentor&&<GraduationCap size={small?11:12}/>}{role}</span>;
 }
-function Eyebrow({children,style}){return <p className="czSec font-bold uppercase mb-2" style={{fontSize:11,letterSpacing:1.6,color:INK3,...style}}>{children}</p>;}
+function Eyebrow({children,style}){return <p className="font-bold uppercase mb-2" style={{fontSize:11,letterSpacing:1.6,color:INK3,...style}}>{children}</p>;}
 function VisChip({vis,onClick}){
   const meta=VIS[vis.type];const I=meta.Icon;
   const label=vis.type==="people"?`${vis.people.length} ${vis.people.length===1?"friend":"friends"}`:meta.label;
@@ -703,12 +703,12 @@ function MentorScreen({cohorts,goals,activeId,onSelect,onOpenMentee,onOpenGoal,o
           </button>);})}
         {cohortGoals.length===0&&<EmptyState icon={Target} title="No Kohort goals yet" body={`Tap Add goal to set the first shared goal for ${c.name}.`}/>}
       </div>
-      {API_BASE&&(<>
+      {API_BASE&&(<div className="mt-8">
         <Eyebrow>Export</Eyebrow>
-        <ExportCard title={c.name} path={`/api/export/cohort/${safe}`}
+        <ExportCard title={`Export ${c.name}`} path={`/api/export/cohort/${safe}`}
           body="Member progress and this Kohort's shared goals, with the full daily log."
           note="Members' personal goals are never included — only the goals this Kohort shares."/>
-      </>)}
+      </div>)}
     </div>
   );
 }
@@ -1079,8 +1079,8 @@ function InsightsScreen({goals,subscribed}){
         </div>
       </>)}
       {API_BASE&&(<>
-        <Eyebrow>Export</Eyebrow>
-        <ExportCard title="Your data" path="/api/export/me"
+        <Eyebrow>Your data</Eyebrow>
+        <ExportCard title="Export your data" path="/api/export/me"
           body="Every goal and every day you've logged — yours to keep, open in Excel, Numbers or Sheets."
           note="The spreadsheet has three tabs: Summary, Goals, and your full Daily log."/>
       </>)}
@@ -1125,7 +1125,7 @@ function ProfileScreen({memberId,wall,onBack,onEncourage,onDeleteNote,profile,on
           <div className="space-y-3">{weekData.map((g)=>(<div key={g.id} className="flex items-center justify-between gap-3"><span className="min-w-0" style={{fontSize:13.5,color:INK2,overflowWrap:"anywhere"}}>{g.title}</span><TallyMarks count={Math.max(0,Math.min(7,g.count))} color={PINE} scale={0.85}/></div>))}</div>
         )}
       </div></div>
-      <div className="px-4 mt-7">
+      <div className="px-4 mt-5">
         <div className="flex items-center justify-between mb-2"><Eyebrow style={{margin:0}}>Full history</Eyebrow><span className="inline-flex items-center gap-1 rounded-full font-semibold" style={{fontSize:10.5,padding:"2px 8px",color:STREAK,background:STREAK_SOFT}}><GraduationCap size={12}/> mentor view</span></div>
         {(seeHistory&&historyData!=="forbidden")?(
           hist==null?(
@@ -1147,7 +1147,7 @@ function ProfileScreen({memberId,wall,onBack,onEncourage,onDeleteNote,profile,on
         )}
       </div>
       {!isMe&&(
-        <div className="px-4 mt-7">
+        <div className="px-4 mt-5">
           <Eyebrow>Shared with you</Eyebrow>
           <p style={{fontSize:12,color:INK3,marginTop:-4,marginBottom:10}}>Personal goals {m.name.split(" ")[0]} chose to share with you.</p>
           {sharedGoals==null?(
@@ -1166,7 +1166,7 @@ function ProfileScreen({memberId,wall,onBack,onEncourage,onDeleteNote,profile,on
           )}
         </div>
       )}
-      <div className="px-4 mt-7">
+      <div className="px-4 mt-5">
         <Eyebrow>Encouragement wall</Eyebrow>
         <div className="space-y-2.5 mb-3">
           {notes.length===0&&<p style={{fontSize:13.5,color:INK3}}>{isMe?"When your Kohort-mates write to you, it shows up here.":`Be the first to cheer ${m.name.split(" ")[0]} on.`}</p>}
@@ -1372,7 +1372,7 @@ function CohortSettingsSheet({cohortId,onClose,onSave,onSetRole,onRemoveMember,o
       <div className="mb-4"><CohortPreview name={clean} theme={theme} desc={desc.trim()}/></div>
       <button disabled={!ok||!dirty} onClick={()=>onSave(cohortId,{name:clean,fullName:`${clean} Cohort`,theme,description:desc.trim()})} className="w-full rounded-2xl py-3.5 font-semibold mb-6" style={{background:(ok&&dirty)?PINE:SUNKEN,color:(ok&&dirty)?"#fff":INK3,fontSize:15}}>Save changes</button>
 
-      <Eyebrow style={{marginBottom:0}}>Invite</Eyebrow>
+      <Eyebrow style={{margin:0}}>Invite</Eyebrow>
       <p style={{fontSize:12,color:INK3,margin:"2px 0 8px"}}>Share this code so people can join.</p>
       <div className="flex items-center gap-2 mb-2">
         <div className="flex-1 rounded-xl px-3.5 flex items-center" style={{height:46,background:SUNKEN,border:`1px solid ${BORDER2}`,fontFamily:FD,fontSize:15,letterSpacing:1,color:INK}}>{code}</div>
@@ -1380,7 +1380,7 @@ function CohortSettingsSheet({cohortId,onClose,onSave,onSetRole,onRemoveMember,o
       </div>
       <button onClick={doRegen} onBlur={()=>setConfirmRegen(false)} disabled={regenning} className="inline-flex items-center gap-1.5 rounded-xl font-semibold px-3 mb-6" style={{height:38,background:confirmRegen?CHEER_SOFT:SUNKEN,color:confirmRegen?CHEER:INK2,fontSize:12.5,border:`1px solid ${confirmRegen?CHEER:BORDER2}`}}><RefreshCw size={14}/>{regenning?"Generating…":confirmRegen?"Tap again — this disables the old code":"Regenerate code"}</button>
 
-      <Eyebrow style={{marginBottom:0}}>Members · {members.length}</Eyebrow>
+      <Eyebrow style={{margin:0}}>Members · {members.length}</Eyebrow>
       <div className="space-y-2 mt-2 mb-6">
         {members.map((m)=>{const isMe=m.id===ME;const isMentor=m.role==="mentor";const lastMentor=isMentor&&mentorCount<=1;return(
           <div key={m.id} className="flex items-center gap-2.5 rounded-2xl p-2.5" style={{background:CARD,border:`1px solid ${BORDER}`}}>
@@ -1489,7 +1489,7 @@ function ConfirmDialog({title,body,confirmLabel,danger,onConfirm,onCancel}){
     </div>
   </div>;
 }
-function SettingsScreen({settings,onChange,subscribed,onLeave,onJoinOpen,onReset,onBack,profile,onOpenProfile,onOpenExport,onSwitchAccount,onSignOut,onReplayIntro,serverStatus,onServerChange,onTestConnection,onDeleteAccount,onShowRecovery,onTogglePush}){
+function SettingsScreen({settings,onChange,subscribed,onLeave,onJoinOpen,onReset,onBack,profile,onOpenProfile,onSwitchAccount,onSignOut,onReplayIntro,serverStatus,onServerChange,onTestConnection,onDeleteAccount,onShowRecovery,onTogglePush}){
   const [visOpen,setVisOpen]=useState(false);
   const [confirm,setConfirm]=useState(null);
   const setNotif=(k)=>onChange({...settings,notif:{...settings.notif,[k]:!settings.notif[k]}});
@@ -1580,7 +1580,7 @@ function SettingsScreen({settings,onChange,subscribed,onLeave,onJoinOpen,onReset
 
       <Eyebrow>Data</Eyebrow>
       <GroupCard>
-        <SettingRow icon={Database} label="Export my data" sub="Download a spreadsheet from the Insights tab" onClick={onOpenExport} right={<ChevronRight size={18} style={{color:INK3}}/>}/>
+        <SettingRow icon={Database} label="Export my data" right={<SoonPill/>}/>
         <SettingRow icon={Compass} label="Replay welcome tour" onClick={onReplayIntro} right={<ChevronRight size={18} style={{color:INK3}}/>}/>
         <SettingRow icon={RotateCcw} label="Reset to demo data" sub="Restore the original seed and clear your changes" last onClick={()=>setConfirm({kind:"reset"})} right={<ChevronRight size={18} style={{color:INK3}}/>}/>
       </GroupCard>
@@ -1602,7 +1602,7 @@ function SettingsScreen({settings,onChange,subscribed,onLeave,onJoinOpen,onReset
 
       <div className="flex flex-col items-center text-center pt-2">
         <div className="mb-2.5"><Logo size={44}/></div>
-        <div style={{fontFamily:FD,fontSize:16,fontWeight:600,color:INK}}>Kohort 1.2.5</div>
+        <div style={{fontFamily:FD,fontSize:16,fontWeight:600,color:INK}}>Kohort 1.2.6</div>
         <p style={{fontSize:12,color:INK3,marginTop:2}}>Made for Kohorts who keep each other going.</p>
         <div className="flex items-center gap-3 mt-3" style={{fontSize:12,color:INK2}}><span className="inline-flex items-center gap-1">Terms <SoonPill/></span><span style={{color:BORDER2}}>·</span><span className="inline-flex items-center gap-1">Privacy <SoonPill/></span></div>
       </div>
@@ -2627,7 +2627,6 @@ export default function App(){
         .czsheet{animation:czUp .34s cubic-bezier(.16,1.02,.3,1)}
         @keyframes czpop{0%{transform:scale(.6)}55%{transform:scale(1.3)}100%{transform:scale(1)}}
         .czpop{animation:czpop .32s ease}
-        .czSec{margin-top:28px} .czSec:first-child{margin-top:0}
         @keyframes czSlideIn{from{opacity:0;transform:translateX(var(--cz-from,14px))}to{opacity:1;transform:translateX(0)}}
         .czSlideIn{animation:czSlideIn .26s cubic-bezier(.22,.8,.3,1) both}
         @keyframes czRise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
@@ -2668,7 +2667,7 @@ export default function App(){
           {(settings.server.on&&!authed)?<AuthScreen serverUrl={settings.server.url} onAuthed={onAuthed} onBackToDemo={()=>applyServer({...settings.server,on:false})}/>
           :showNotifs?<NotificationsScreen items={notifications.filter((n)=>(n.minsAgo||0)<NOTIF_MAX_AGE)} requests={friendReqs.incoming} onAccept={acceptReq} onDecline={declineReq} onOpenMember={(id)=>{closeNotifs();setOpenMember(id);}} onBack={closeNotifs} onMarkAll={markAllNotifs} onDismiss={dismissNotif}/>
           :editProfile?<ProfileEditScreen profile={profile} onSave={async(p)=>{try{const saved=await api.patchProfile(p);setProfile((cur)=>(API_BASE&&saved)?{...cur,name:saved.name??p.name,username:saved.username??p.username,avatar:saved.avatar!==undefined?saved.avatar:p.avatar,bio:saved.bio??p.bio,nameChangesLeft:saved.nameChangesLeft??p.nameChangesLeft}:p);setEditProfile(false);}catch(e){setToast(e.message);}}} onBack={()=>setEditProfile(false)}/>
-            :showSettings?<SettingsScreen settings={settings} onChange={setSettings} subscribed={subscribed} onLeave={leaveCohort} onJoinOpen={()=>setSheet({kind:"join"})} onReset={resetDemo} onBack={()=>setShowSettings(false)} profile={profile} onOpenProfile={()=>{setShowSettings(false);setOpenMember(ME);}} onOpenExport={()=>{setShowSettings(false);setTab("insights");}} onSwitchAccount={()=>{if(settings.server.on){signOut();}else{setShowAccounts(true);}}} onSignOut={signOut} onReplayIntro={()=>{setShowSettings(false);setShowOnboarding(true);}} serverStatus={serverStatus} onServerChange={applyServer} onTestConnection={()=>{setServerStatus(null);api.health().then(setServerStatus);}} onDeleteAccount={deleteAccount} onShowRecovery={showRecovery} onTogglePush={togglePush}/>
+            :showSettings?<SettingsScreen settings={settings} onChange={setSettings} subscribed={subscribed} onLeave={leaveCohort} onJoinOpen={()=>setSheet({kind:"join"})} onReset={resetDemo} onBack={()=>setShowSettings(false)} profile={profile} onOpenProfile={()=>{setShowSettings(false);setOpenMember(ME);}} onSwitchAccount={()=>{if(settings.server.on){signOut();}else{setShowAccounts(true);}}} onSignOut={signOut} onReplayIntro={()=>{setShowSettings(false);setShowOnboarding(true);}} serverStatus={serverStatus} onServerChange={applyServer} onTestConnection={()=>{setServerStatus(null);api.health().then(setServerStatus);}} onDeleteAccount={deleteAccount} onShowRecovery={showRecovery} onTogglePush={togglePush}/>
             :showSearch?<SearchScreen onBack={()=>setShowSearch(false)} onOpenMember={(id)=>{setShowSearch(false);setOpenMember(id);}} subscribed={subscribed} profile={profile} friends={friends} statusOf={friendStatus} onToggleFriend={toggleFriend} requests={friendReqs.incoming} onAccept={acceptReq} onDecline={declineReq}/>
             :openMember?<ProfileScreen memberId={openMember} wall={wall} onBack={()=>setOpenMember(null)} onEncourage={encourage} onDeleteNote={deleteNote} profile={profile} onEditProfile={()=>setEditProfile(true)} statusOf={friendStatus} onToggleFriend={toggleFriend} sharedGoals={memberGoals[openMember]} weekData={memberWeek[openMember]} historyData={memberHist[openMember]}/>
             :detailGoal?<GoalDetailScreen goal={detailGoal} onBack={()=>setDetailGoalId(null)} onSetValue={setValue} onToggle={toggle} onEditVis={(id)=>setSheet({kind:"vis",goalId:id})} onEdit={(id)=>setSheet({kind:"edit",goalId:id})} onDelete={(id)=>setConfirmDelete(id)} canManage={detailGoal.category==="personal"||isMentorOfCohort(detailGoal.cohortId)}/>
