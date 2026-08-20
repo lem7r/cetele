@@ -1,6 +1,6 @@
 {
   "name": "cetele-backend",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "private": true,
   "description": "Çetele API — users, cohorts, goals, and per-day logs.",
   "main": "server.js",
@@ -13,6 +13,7 @@
   "dependencies": {
     "better-sqlite3": "^11.3.0",
     "cors": "^2.8.5",
+    "exceljs": "^4.4.0",
     "express": "^4.19.2"
   }
 }

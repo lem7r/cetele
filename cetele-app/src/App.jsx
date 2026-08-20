@@ -10,7 +10,7 @@ import {
   Footprints, MoreHorizontal, Trash2, Pencil, Leaf, Bell, TrendingUp, Clock,
   TrendingDown, AlertCircle, LogOut, Ticket, Compass,
   Settings as SettingsIcon, RotateCcw, Languages, Database, ShieldCheck, Type, Search as SearchIcon,
-  Copy, UserMinus, Archive, KeyRound, BellRing, RefreshCw,
+  Copy, UserMinus, Archive, KeyRound, BellRing, RefreshCw, Download,
 } from "lucide-react";
 
 /* ---- tokens ---- */
@@ -231,6 +231,18 @@ let onSessionExpired=null;
 const setSessionExpiredHandler=(fn)=>{onSessionExpired=fn;};
 const authHeaders=()=>(AUTH_TOKEN?{Authorization:`Bearer ${AUTH_TOKEN}`}:{});
 const apiFetch=(url,opts={})=>fetch(url,{...opts,headers:{...(opts.headers||{}),...authHeaders()}}).then((r)=>{if(r.status===401&&AUTH_TOKEN&&onSessionExpired)onSessionExpired();return r;});
+// Downloads an export. Fetches with the auth header (so a plain <a href> won't do), then hands the blob to the browser.
+const downloadExport=async(path,format)=>{
+  if(!API_BASE)throw new Error("Exports need the server connection turned on.");
+  const r=await apiFetch(`${API_BASE}${path}?format=${format}`);
+  if(!r.ok){let msg="Export failed. Please try again.";try{const j=await r.json();if(j&&j.error)msg=j.error;}catch{/* non-JSON error */}throw new Error(msg);}
+  const blob=await r.blob();
+  const cd=r.headers.get("content-disposition")||"";const mt=/filename="?([^";]+)"?/.exec(cd);
+  const name=mt?mt[1]:`kohort-export.${format}`;
+  const url=URL.createObjectURL(blob);const a=document.createElement("a");
+  a.href=url;a.download=name;a.style.display="none";document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},2000);
+};
 
 const DB_USERS=[
   {id:"u_murat",username:"murat",name:"Murat",bio:"On a steady streak with the Sunrise crew."},
@@ -549,14 +561,14 @@ function CohortDropdown({ids,activeId,onSelect,onJoinOpen,onCreateOpen}){
 }
 
 /* ---------- goal card ---------- */
-function GoalCard({g,onSetValue,onToggle,onEditVis,onEdit,onDelete,onOpen,canManage,selectedIso=TODAY_ISO}){
+function GoalCard({g,onSetValue,onToggle,onEditVis,onEdit,onDelete,onOpen,canManage,selectedIso=TODAY_ISO,ix=0}){
   const met=metOnDate(g,selectedIso);const val=valueOnDate(g,selectedIso);const done=weekDone(g);const p=g.target?Math.round((done/g.target)*100):0;const complete=g.target>0&&done>=g.target;
   const isToday=selectedIso===TODAY_ISO;const isFuture=isFutureIso(selectedIso);const canLog=dayEditableIso(selectedIso);const dayLabel=isToday?"Today":`${dowOf(selectedIso)} ${domOf(selectedIso)}`;
   const th=g.category==="cohort"?themeOf(g.cohortId):null;
   const [editing,setEditing]=useState(false);const [temp,setTemp]=useState("");const [menu,setMenu]=useState(false);
   const commit=()=>{const v=Math.max(0,parseInt(temp||"0",10)||0);onSetValue(g.id,selectedIso,v);setEditing(false);};
   return (
-    <div className="rounded-2xl p-4" style={{background:complete?MINT:CARD,border:`1px solid ${complete?MINT_BORDER:BORDER}`,borderLeft:th?`4px solid ${th.dot}`:`1px solid ${complete?MINT_BORDER:BORDER}`,boxShadow:complete?"none":"0 1px 2px rgba(28,25,23,.04)"}}>
+    <div className="rounded-2xl p-4 czRise" style={{animationDelay:`${Math.min(ix,6)*45}ms`,background:complete?MINT:CARD,border:`1px solid ${complete?MINT_BORDER:BORDER}`,borderLeft:th?`4px solid ${th.dot}`:`1px solid ${complete?MINT_BORDER:BORDER}`,boxShadow:complete?"none":"0 1px 2px rgba(28,25,23,.04)"}}>
       <div className="flex items-center justify-between mb-2.5">
         {g.category==="cohort"
           ? <span className="inline-flex items-center gap-1 rounded-full" style={{background:th.soft,color:th.accent,fontSize:11,fontWeight:700,padding:"2px 8px"}}><Users size={11}/> {cohortName(g.cohortId)}</span>
@@ -691,6 +703,12 @@ function MentorScreen({cohorts,goals,activeId,onSelect,onOpenMentee,onOpenGoal,o
           </button>);})}
         {cohortGoals.length===0&&<EmptyState icon={Target} title="No Kohort goals yet" body={`Tap Add goal to set the first shared goal for ${c.name}.`}/>}
       </div>
+      {API_BASE&&(<div className="mt-8">
+        <Eyebrow>Export</Eyebrow>
+        <ExportCard title={`Export ${c.name}`} path={`/api/export/cohort/${safe}`}
+          body="Member progress and this Kohort's shared goals, with the full daily log."
+          note="Members' personal goals are never included — only the goals this Kohort shares."/>
+      </div>)}
     </div>
   );
 }
@@ -730,7 +748,7 @@ function CohortGroup({cohortId,goals,expanded,onToggle,selectedIso,onSetValue,on
         </div>
         <ChevronDown size={20} style={{color:th.accent,transform:expanded?"rotate(180deg)":"none",transition:"transform .2s",flexShrink:0}}/>
       </button>
-      {expanded&&<div className="space-y-2.5 mt-2.5">{goals.map((g)=><GoalCard key={g.id} g={g} onSetValue={onSetValue} onToggle={onToggleGoal} onEdit={onEdit} onDelete={onDelete} canManage={isMentorOfCohort(g.cohortId)} onOpen={onOpenGoal} selectedIso={selectedIso}/>)}</div>}
+      {expanded&&<div className="space-y-2.5 mt-2.5">{goals.map((g,ix)=><GoalCard key={g.id} ix={ix} g={g} onSetValue={onSetValue} onToggle={onToggleGoal} onEdit={onEdit} onDelete={onDelete} canManage={isMentorOfCohort(g.cohortId)} onOpen={onOpenGoal} selectedIso={selectedIso}/>)}</div>}
     </div>
   );
 }
@@ -793,7 +811,7 @@ function CeteleScreen({goals,subscribed,onSetValue,onToggle,onEditVis,onEdit,onD
       {personalGoals.length===0?(
         <div className="rounded-2xl p-6 text-center" style={{border:`2px dashed ${BORDER2}`}}><Target size={26} style={{color:INK3}} className="mx-auto mb-2"/><p className="font-semibold" style={{fontSize:14,color:INK}}>No personal goals yet</p><p style={{fontSize:12.5,color:INK3,marginTop:2}}>Add one only you control — then share it if you want.</p></div>
       ):(
-        <div className="space-y-2.5">{personalGoals.map((g)=><GoalCard key={g.id} g={g} onSetValue={onSetValue} onToggle={onToggle} onEditVis={onEditVis} onEdit={onEdit} onDelete={onDelete} canManage={true} onOpen={onOpenGoal} selectedIso={selectedIso}/>)}</div>
+        <div className="space-y-2.5">{personalGoals.map((g,ix)=><GoalCard key={g.id} ix={ix} g={g} onSetValue={onSetValue} onToggle={onToggle} onEditVis={onEditVis} onEdit={onEdit} onDelete={onDelete} canManage={true} onOpen={onOpenGoal} selectedIso={selectedIso}/>)}</div>
       )}
       <button onClick={onAdd} className="w-full mt-4 rounded-2xl py-3.5 font-semibold flex items-center justify-center gap-1.5" style={{border:`2px dashed ${BORDER2}`,color:INK3,fontSize:14}}><Plus size={16}/> Add a goal</button>
     </div>
@@ -803,6 +821,24 @@ function CeteleScreen({goals,subscribed,onSetValue,onToggle,onEditVis,onEdit,onD
 /* ---------- Feed ---------- */
 // Feed hero: a swipeable "today" pulse — slide 0 is your total (personal + all Kohorts),
 // then one slide per Kohort, tinted to its theme. Swipe or use the arrows. Always today, live.
+// Ticks a number up/down to its new value — the change catches the eye instead of snapping.
+function useCountUp(target,ms=520){
+  const [n,setN]=useState(target);const from=useRef(target);const raf=useRef(0);
+  useEffect(()=>{
+    const start=from.current;const delta=target-start;
+    if(delta===0){setN(target);return;}
+    const t0=(typeof performance!=="undefined"?performance.now():Date.now());
+    const step=(now)=>{
+      const p=Math.min(1,((now||Date.now())-t0)/ms);
+      const e=1-Math.pow(1-p,3);
+      setN(Math.round(start+delta*e));
+      if(p<1)raf.current=requestAnimationFrame(step);else from.current=target;
+    };
+    raf.current=requestAnimationFrame(step);
+    return ()=>cancelAnimationFrame(raf.current);
+  },[target,ms]);
+  return n;
+}
 function PulseCarousel({subscribed,marksToday,profile}){
   const [idx,setIdx]=useState(0);
   const kohorts=subscribed.map((id)=>COHORTS[id]).filter(Boolean);
@@ -817,13 +853,16 @@ function PulseCarousel({subscribed,marksToday,profile}){
         chip:"#ffffff",chipFg:th.accent,dot:th.accent,dotOff:th.border,spark:th.accent,sparkOp:0.1,members:c.members};}),
   ];
   const i=Math.min(idx,slides.length-1);const s=slides[i];
+  const [dir,setDir]=useState(1);
+  const shown=useCountUp(s.marks);
   const startX=useRef(null);
   const onTS=(e)=>{startX.current=e.touches[0].clientX;};
-  const onTE=(e)=>{if(startX.current==null)return;const dx=e.changedTouches[0].clientX-startX.current;if(Math.abs(dx)>40)setIdx((k)=>Math.max(0,Math.min(slides.length-1,k+(dx<0?1:-1))));startX.current=null;};
-  const go=(d)=>setIdx((k)=>Math.max(0,Math.min(slides.length-1,k+d)));
+  const onTE=(e)=>{if(startX.current==null)return;const dx=e.changedTouches[0].clientX-startX.current;if(Math.abs(dx)>40){setDir(dx<0?1:-1);setIdx((k)=>Math.max(0,Math.min(slides.length-1,k+(dx<0?1:-1))));}startX.current=null;};
+  const go=(d)=>{setDir(d);setIdx((k)=>Math.max(0,Math.min(slides.length-1,k+d)));};
   return (
     <div className="rounded-3xl p-5 mb-4 relative overflow-hidden" style={{background:s.bg,border:`1px solid ${s.border}`,color:s.fg,transition:"background .25s, border-color .25s"}} onTouchStart={onTS} onTouchEnd={onTE}>
       <div className="absolute -right-6 -top-8" style={{opacity:s.sparkOp,color:s.spark,pointerEvents:"none"}}><Sparkles size={120}/></div>
+      <div key={s.key} className="czSlideIn" style={{"--cz-from":dir>0?"16px":"-16px"}}>
       <div className="flex items-center justify-between gap-2" style={{position:"relative"}}>
         <p className="font-medium" style={{fontSize:13,color:s.muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.label}</p>
         {slides.length>1&&<div className="flex items-center gap-1.5 shrink-0" style={{position:"relative"}}>
@@ -831,11 +870,12 @@ function PulseCarousel({subscribed,marksToday,profile}){
           <button type="button" onClick={()=>go(1)} disabled={i===slides.length-1} aria-label="Next" className="flex items-center justify-center rounded-full" style={{width:28,height:28,background:s.chip,color:s.chipFg,opacity:i===slides.length-1?0.4:1}}><ChevronRight size={16}/></button>
         </div>}
       </div>
-      <div className="flex items-end gap-3 mt-1"><span style={{fontFamily:FD,fontSize:48,lineHeight:1,fontWeight:600,letterSpacing:-1.5,color:s.num}}>{s.marks}</span><span className="mb-1.5" style={{fontSize:13.5,color:s.muted}}>{s.foot}</span></div>
-      <div className="mt-3"><TallyMarks count={s.marks} color={s.tally}/></div>
+      <div className="flex items-end gap-3 mt-1"><span style={{fontFamily:FD,fontSize:48,lineHeight:1,fontWeight:600,letterSpacing:-1.5,color:s.num}}>{shown}</span><span className="mb-1.5" style={{fontSize:13.5,color:s.muted}}>{s.foot}</span></div>
+      <div className="mt-3"><TallyMarks count={shown} color={s.tally}/></div>
       {s.members?(
         <div className="flex -space-x-2 mt-4">{s.members.slice(0,8).map((m)=><div key={m.id} style={{boxShadow:`0 0 0 2px ${s.ring}`,borderRadius:99,opacity:m.loggedToday?1:0.5}}><Avatar name={dispName(m.id,profile)} pfp={dispPfp(m.id,profile)} size={28}/></div>)}</div>
       ):(<div aria-hidden style={{height:28,marginTop:16}}/>)}
+      </div>
       {slides.length>1&&<div className="flex justify-center gap-1.5 mt-4">{slides.map((_,k)=><span key={k} style={{width:k===i?18:6,height:6,borderRadius:99,background:k===i?s.dot:s.dotOff,transition:"width .2s"}}/>)}</div>}
     </div>
   );
@@ -887,8 +927,8 @@ function FeedScreen({feed,friendFeed,friends,subscribed,onCheer,onOpenMember,onO
         </div>
       ):(<>
       <Eyebrow>Activity</Eyebrow>
-      <div className="space-y-3">{items.map((item)=>{const m=memberById(item.who);return(
-        <div key={item.id} className="rounded-2xl p-4" style={{background:CARD,border:`1px solid ${BORDER}`,boxShadow:"0 1px 2px rgba(28,25,23,.05)"}}>
+      <div className="space-y-3">{items.map((item,ix)=>{const m=memberById(item.who);return(
+        <div key={item.id} className="rounded-2xl p-4 czRise" style={{background:CARD,border:`1px solid ${BORDER}`,boxShadow:"0 1px 2px rgba(28,25,23,.05)",animationDelay:`${Math.min(ix,6)*45}ms`}}>
           <div className="flex gap-3">
             <button onClick={()=>onOpenMember(m.id)} className="shrink-0"><Avatar name={dispName(m.id,profile)} pfp={dispPfp(m.id,profile)} size={42} ring={m.role==="mentor"?STREAK:undefined}/></button>
             <div className="min-w-0 flex-1">
@@ -944,6 +984,31 @@ function CohortScreen({subscribed,activeId,onSelect,onOpenMember,onJoinOpen,onCr
 }
 
 /* ---------- Insights ---------- */
+// Export card: Excel is the primary action, CSV a quieter alternative underneath.
+function ExportCard({title,body,path,note}){
+  const [busy,setBusy]=useState("");const [err,setErr]=useState("");const [done,setDone]=useState("");
+  const run=async(fmt)=>{
+    setErr("");setDone("");setBusy(fmt);
+    try{await downloadExport(path,fmt);setDone(fmt==="csv"?"CSV downloaded.":"Spreadsheet downloaded.");}
+    catch(e){setErr(e.message||"Export failed. Please try again.");}
+    setBusy("");
+  };
+  return (
+    <div className="rounded-2xl p-4" style={{background:CARD,border:`1px solid ${BORDER}`}}>
+      <div className="flex items-center gap-2 mb-1"><Download size={16} style={{color:PINE}}/><span className="font-semibold" style={{fontSize:14,color:INK}}>{title}</span></div>
+      {body&&<p style={{fontSize:12.5,color:INK3,lineHeight:1.5}}>{body}</p>}
+      <button onClick={()=>run("xlsx")} disabled={!!busy} className="w-full rounded-xl font-semibold mt-3 inline-flex items-center justify-center gap-2" style={{height:44,background:PINE,color:"#fff",fontSize:14,opacity:busy?0.65:1}}>
+        {busy==="xlsx"?<><RefreshCw size={15} className="czspin"/> Preparing…</>:<>Download Excel (.xlsx)</>}
+      </button>
+      <button onClick={()=>run("csv")} disabled={!!busy} className="w-full font-semibold mt-2" style={{height:32,color:INK2,fontSize:12.5,opacity:busy?0.65:1}}>
+        {busy==="csv"?"Preparing CSV…":"or download as CSV"}
+      </button>
+      {note&&<p style={{fontSize:11.5,color:INK3,marginTop:6,lineHeight:1.5}}>{note}</p>}
+      {done&&<p style={{fontSize:12,color:PINE_DEEP,marginTop:7,fontWeight:600}}>{done}</p>}
+      {err&&<p style={{fontSize:12,color:CHEER,marginTop:7}}>{err}</p>}
+    </div>
+  );
+}
 function InsightsScreen({goals,subscribed}){
   const visible=goals.filter((g)=>g.category==="personal"||(g.category==="cohort"&&subscribed.includes(g.cohortId)));
   const marks=visible.reduce((a,g)=>a+weekDone(g),0);
@@ -1012,6 +1077,12 @@ function InsightsScreen({goals,subscribed}){
               <StreakBadge n={g.streak} small/>
             </div>))}
         </div>
+      </>)}
+      {API_BASE&&(<>
+        <Eyebrow>Your data</Eyebrow>
+        <ExportCard title="Export your data" path="/api/export/me"
+          body="Every goal and every day you've logged — yours to keep, open in Excel, Numbers or Sheets."
+          note="The spreadsheet has three tabs: Summary, Goals, and your full Daily log."/>
       </>)}
     </div>
   );
@@ -1531,7 +1602,7 @@ function SettingsScreen({settings,onChange,subscribed,onLeave,onJoinOpen,onReset
 
       <div className="flex flex-col items-center text-center pt-2">
         <div className="mb-2.5"><Logo size={44}/></div>
-        <div style={{fontFamily:FD,fontSize:16,fontWeight:600,color:INK}}>Kohort 1.2.4</div>
+        <div style={{fontFamily:FD,fontSize:16,fontWeight:600,color:INK}}>Kohort 1.2.5</div>
         <p style={{fontSize:12,color:INK3,marginTop:2}}>Made for Kohorts who keep each other going.</p>
         <div className="flex items-center gap-3 mt-3" style={{fontSize:12,color:INK2}}><span className="inline-flex items-center gap-1">Terms <SoonPill/></span><span style={{color:BORDER2}}>·</span><span className="inline-flex items-center gap-1">Privacy <SoonPill/></span></div>
       </div>
@@ -2543,7 +2614,7 @@ export default function App(){
   return (
     <div className="w-full flex justify-center" style={{background:BORDER2,minHeight:"100vh"}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=Quicksand:wght@500;600;700&display=swap');
-        .cz,.cz *{font-family:${FU}} .cz button{cursor:pointer;transition:transform .1s} .cz button:active{transform:scale(.97)}
+        .cz,.cz *{font-family:${FU}} .cz button{cursor:pointer;transition:transform .14s cubic-bezier(.34,1.3,.64,1)} .cz button:active{transform:scale(.955)}
         .cz{font-variant-numeric:tabular-nums}                                   /* stats never jitter as numbers change */
         .cz{background-image:radial-gradient(rgba(28,25,23,.022) 0.5px, transparent 0.5px);background-size:14px 14px}   /* faint paper texture */
         @keyframes czdraw{from{stroke-dashoffset:var(--cz-dash,60)}to{stroke-dashoffset:0}}
@@ -2553,15 +2624,19 @@ export default function App(){
         .cz ::-webkit-scrollbar{display:none}
         .cz input[type=number]::-webkit-inner-spin-button,.cz input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
         @keyframes czUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-        .czsheet{animation:czUp .26s cubic-bezier(.2,.8,.2,1)}
+        .czsheet{animation:czUp .34s cubic-bezier(.16,1.02,.3,1)}
         @keyframes czpop{0%{transform:scale(.6)}55%{transform:scale(1.3)}100%{transform:scale(1)}}
         .czpop{animation:czpop .32s ease}
+        @keyframes czSlideIn{from{opacity:0;transform:translateX(var(--cz-from,14px))}to{opacity:1;transform:translateX(0)}}
+        .czSlideIn{animation:czSlideIn .26s cubic-bezier(.22,.8,.3,1) both}
+        @keyframes czRise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+        .czRise{animation:czRise .3s cubic-bezier(.22,.8,.3,1) both}
         @keyframes czspin{to{transform:rotate(360deg)}}
         .czspin{animation:czspin .7s linear infinite}
         @keyframes czshim{0%,100%{opacity:.5}50%{opacity:1}}
         .czshim{animation:czshim 1.3s ease-in-out infinite}
-        @media (prefers-reduced-motion: reduce){.czsheet,.czpop,.czspin,.czshim,.cz-draw{animation:none}.cz button:active{transform:none}}
-        .cz-reduce .czsheet,.cz-reduce .czpop,.cz-reduce .czspin,.cz-reduce .czshim,.cz-reduce .cz-draw{animation:none}.cz-reduce button:active{transform:none}`}</style>
+        @media (prefers-reduced-motion: reduce){.czsheet,.czpop,.czspin,.czshim,.cz-draw,.czSlideIn,.czRise{animation:none}.cz button:active{transform:none}}
+        .cz-reduce .czsheet,.cz-reduce .czpop,.cz-reduce .czspin,.cz-reduce .czshim,.cz-reduce .cz-draw,.cz-reduce .czSlideIn,.cz-reduce .czRise{animation:none}.cz-reduce button:active{transform:none}`}</style>
 
       <div lang="en" data-rev={cohortRev} className={"cz w-full flex flex-col"+(settings.reduceMotion?" cz-reduce":"")} style={{maxWidth:430,background:CANVAS,minHeight:"100vh"}}>
         {!onAuthScreen&&<header className="sticky top-0 px-4 py-3 flex items-center justify-between" style={{zIndex:60,background:"#faf9f7e6",backdropFilter:"blur(8px)",borderBottom:`1px solid ${BORDER}`}}>

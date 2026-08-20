@@ -1100,6 +1100,167 @@ function scanStreaksAtRisk({ ignoreHour = false } = {}) {
 setInterval(() => scanStreaksAtRisk(), 60 * 60 * 1000);       // hourly
 setTimeout(() => scanStreaksAtRisk(), 15000);                 // shortly after boot
 
+// ----- data export (xlsx / csv) -----
+// Personal export = everything the signed-in user owns. Mentor export = ONLY the Kohort's
+// shared goals + member progress; members' personal goals are never included, so exporting
+// cannot bypass the app's per-goal visibility model.
+const ExcelJS = require("exceljs");
+
+const isMentorOf = (userId, cohortId) =>
+  !!db.prepare("SELECT 1 FROM cohort_members WHERE cohort_id = ? AND user_id = ? AND role = 'mentor'").get(cohortId, userId);
+
+const safeFilePart = (s) => String(s || "").normalize("NFKD").replace(/[^\w-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40).toLowerCase() || "kohort";
+
+function csvOf(rows, headers) {
+  const esc = (v) => {
+    const s = v === null || v === undefined ? "" : String(v);
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const keys = headers.map((h) => h.key);
+  const lines = [headers.map((h) => esc(h.header)).join(",")];
+  for (const r of rows) lines.push(keys.map((k) => esc(r[k])).join(","));
+  return "\uFEFF" + lines.join("\r\n");   // BOM so Excel reads UTF-8 (Turkish characters) correctly
+}
+
+async function sendWorkbook(res, sheets, filename) {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "Kohort";
+  wb.created = new Date();
+  for (const sh of sheets) {
+    const ws = wb.addWorksheet(sh.name);
+    ws.columns = sh.headers;
+    sh.rows.forEach((r) => ws.addRow(r));
+    ws.getRow(1).font = { bold: true };
+    ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFCCFBF1" } };
+    ws.views = [{ state: "frozen", ySplit: 1 }];
+  }
+  const buf = await wb.xlsx.writeBuffer();
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}.xlsx"`);
+  res.send(Buffer.from(buf));
+}
+
+function sendCsv(res, rows, headers, filename) {
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}.csv"`);
+  res.send(csvOf(rows, headers));
+}
+
+const GOAL_HEADERS = [
+  { header: "Title", key: "title", width: 28 }, { header: "Category", key: "category", width: 12 },
+  { header: "Kohort", key: "kohort", width: 22 }, { header: "Type", key: "type", width: 10 },
+  { header: "Unit", key: "unit", width: 12 }, { header: "Daily minimum", key: "daily_min", width: 14 },
+  { header: "Weekly target", key: "target", width: 14 }, { header: "Streak", key: "streak", width: 9 },
+  { header: "Visibility", key: "vis", width: 14 },
+];
+const LOG_HEADERS = [
+  { header: "Date", key: "log_date", width: 13 }, { header: "Goal", key: "title", width: 28 },
+  { header: "Category", key: "category", width: 12 }, { header: "Kohort", key: "kohort", width: 22 },
+  { header: "Value", key: "value", width: 10 }, { header: "Met", key: "met", width: 8 },
+];
+
+app.get("/api/export/me", requireAuth, async (req, res, next) => {
+  try {
+    const fmt = String(req.query.format || "xlsx").toLowerCase() === "csv" ? "csv" : "xlsx";
+    const me = db.prepare("SELECT id, username, name FROM users WHERE id = ?").get(req.userId);
+    if (!me) return res.status(404).json({ error: "user not found" });
+
+    const goals = db.prepare(
+      `SELECT g.title, g.category, g.type, g.unit, g.daily_min, g.target, g.streak,
+              COALESCE(g.vis_type,'') AS vis, COALESCE(c.name,'') AS kohort
+         FROM goals g LEFT JOIN cohorts c ON c.id = g.cohort_id
+        WHERE g.owner_id = ? ORDER BY g.category, g.title`).all(req.userId);
+
+    const logs = db.prepare(
+      `SELECT l.log_date, g.title, g.category, COALESCE(c.name,'') AS kohort, l.value, l.met
+         FROM daily_logs l JOIN goals g ON g.id = l.goal_id
+         LEFT JOIN cohorts c ON c.id = g.cohort_id
+        WHERE l.user_id = ? ORDER BY l.log_date DESC, g.title`).all(req.userId);
+
+    const rows = logs.map((r) => ({ ...r, met: r.met ? "yes" : "no" }));
+    const fname = `kohort-${safeFilePart(me.username)}-${new Date().toISOString().slice(0, 10)}`;
+    if (fmt === "csv") return sendCsv(res, rows, LOG_HEADERS, fname);
+
+    const days = new Set(logs.map((l) => l.log_date));
+    const summary = [
+      { k: "Account", v: `${me.name} (@${me.username})` },
+      { k: "Exported", v: new Date().toISOString().slice(0, 10) },
+      { k: "Goals", v: goals.length },
+      { k: "Logged entries", v: logs.length },
+      { k: "Days with activity", v: days.size },
+      { k: "First entry", v: logs.length ? logs[logs.length - 1].log_date : "—" },
+      { k: "Latest entry", v: logs.length ? logs[0].log_date : "—" },
+    ];
+    await sendWorkbook(res, [
+      { name: "Summary", headers: [{ header: "Field", key: "k", width: 22 }, { header: "Value", key: "v", width: 34 }], rows: summary },
+      { name: "Goals", headers: GOAL_HEADERS, rows: goals },
+      { name: "Daily log", headers: LOG_HEADERS, rows },
+    ], fname);
+  } catch (e) { next(e); }
+});
+
+app.get("/api/export/cohort/:id", requireAuth, async (req, res, next) => {
+  try {
+    const cid = req.params.id;
+    const cohort = db.prepare("SELECT id, name, full_name FROM cohorts WHERE id = ?").get(cid);
+    if (!cohort) return res.status(404).json({ error: "Kohort not found" });
+    if (!isMentorOf(req.userId, cid)) return res.status(403).json({ error: "only a mentor of this Kohort can export it" });
+
+    const fmt = String(req.query.format || "xlsx").toLowerCase() === "csv" ? "csv" : "xlsx";
+    const members = db.prepare(
+      `SELECT u.name, u.username, m.role, m.week_pct, m.streak, m.logged_today, m.trend
+         FROM cohort_members m JOIN users u ON u.id = m.user_id
+        WHERE m.cohort_id = ? ORDER BY m.role DESC, u.name`).all(cid)
+      .map((m) => ({ ...m, logged_today: m.logged_today ? "yes" : "no" }));
+
+    // Shared Kohort goals only — personal goals are deliberately excluded.
+    const goals = db.prepare(
+      `SELECT g.title, g.type, g.unit, g.daily_min, g.target, u.name AS owner
+         FROM goals g JOIN users u ON u.id = g.owner_id
+        WHERE g.cohort_id = ? AND g.category = 'cohort' ORDER BY g.title`).all(cid);
+
+    const logs = db.prepare(
+      `SELECT l.log_date, u.name AS member, g.title, l.value, l.met
+         FROM daily_logs l JOIN goals g ON g.id = l.goal_id JOIN users u ON u.id = l.user_id
+        WHERE g.cohort_id = ? AND g.category = 'cohort'
+        ORDER BY l.log_date DESC, u.name, g.title`).all(cid)
+      .map((r) => ({ ...r, met: r.met ? "yes" : "no" }));
+
+    const memberHeaders = [
+      { header: "Name", key: "name", width: 22 }, { header: "Username", key: "username", width: 18 },
+      { header: "Role", key: "role", width: 10 }, { header: "Week %", key: "week_pct", width: 9 },
+      { header: "Streak", key: "streak", width: 9 }, { header: "Logged today", key: "logged_today", width: 13 },
+      { header: "Trend", key: "trend", width: 9 },
+    ];
+    const cohortLogHeaders = [
+      { header: "Date", key: "log_date", width: 13 }, { header: "Member", key: "member", width: 22 },
+      { header: "Goal", key: "title", width: 28 }, { header: "Value", key: "value", width: 10 },
+      { header: "Met", key: "met", width: 8 },
+    ];
+    const fname = `kohort-${safeFilePart(cohort.name)}-${new Date().toISOString().slice(0, 10)}`;
+    if (fmt === "csv") return sendCsv(res, logs, cohortLogHeaders, fname);
+
+    await sendWorkbook(res, [
+      { name: "Summary", headers: [{ header: "Field", key: "k", width: 22 }, { header: "Value", key: "v", width: 34 }],
+        rows: [
+          { k: "Kohort", v: cohort.full_name || cohort.name },
+          { k: "Exported", v: new Date().toISOString().slice(0, 10) },
+          { k: "Members", v: members.length },
+          { k: "Shared goals", v: goals.length },
+          { k: "Logged entries", v: logs.length },
+          { k: "Note", v: "Shared Kohort goals only — members' personal goals are not included." },
+        ] },
+      { name: "Members", headers: memberHeaders, rows: members },
+      { name: "Kohort goals", headers: [
+        { header: "Title", key: "title", width: 28 }, { header: "Type", key: "type", width: 10 },
+        { header: "Unit", key: "unit", width: 12 }, { header: "Daily minimum", key: "daily_min", width: 14 },
+        { header: "Weekly target", key: "target", width: 14 }, { header: "Set by", key: "owner", width: 22 },
+      ], rows: goals },
+      { name: "Daily log", headers: cohortLogHeaders, rows: logs },
+    ], fname);
+  } catch (e) { next(e); }
+});
+
 // Catches synchronous throws in route handlers (better-sqlite3 is sync) and anything passed to next(err).
 app.use((err, req, res, _next) => {
   logError("request", err, req);
