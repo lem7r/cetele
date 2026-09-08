@@ -231,6 +231,12 @@ let onSessionExpired=null;
 const setSessionExpiredHandler=(fn)=>{onSessionExpired=fn;};
 const authHeaders=()=>(AUTH_TOKEN?{Authorization:`Bearer ${AUTH_TOKEN}`}:{});
 const apiFetch=(url,opts={})=>fetch(url,{...opts,headers:{...(opts.headers||{}),...authHeaders()}}).then((r)=>{if(r.status===401&&AUTH_TOKEN&&onSessionExpired)onSessionExpired();return r;});
+// Capacitor injects window.Capacitor inside the native app. Reading it at runtime (instead of
+// importing the packages) keeps the web bundle byte-identical and means nothing breaks if the
+// native deps aren't installed.
+const capPlugin=(name)=>{const c=(typeof window!=="undefined")&&window.Capacitor;return (c&&c.isNativePlatform&&c.isNativePlatform()&&c.Plugins&&c.Plugins[name])||null;};
+const blobToBase64=(blob)=>new Promise((res,rej)=>{const r=new FileReader();r.onerror=()=>rej(new Error("read failed"));r.onload=()=>res(String(r.result).split(",")[1]||"");r.readAsDataURL(blob);});
+
 // Downloads an export. Fetches with the auth header (so a plain <a href> won't do), then hands the blob to the browser.
 const downloadExport=async(path,format)=>{
   if(!API_BASE)throw new Error("Exports need the server connection turned on.");
@@ -239,6 +245,14 @@ const downloadExport=async(path,format)=>{
   const blob=await r.blob();
   const cd=r.headers.get("content-disposition")||"";const mt=/filename="?([^";]+)"?/.exec(cd);
   const name=mt?mt[1]:`kohort-export.${format}`;
+  // In the native app a blob <a download> does nothing, so write the file and open the share sheet instead.
+  const Filesystem=capPlugin("Filesystem"),Share=capPlugin("Share");
+  if(Filesystem&&Share){
+    const data=await blobToBase64(blob);
+    const w=await Filesystem.writeFile({path:name,data,directory:"CACHE"});
+    await Share.share({title:name,url:w.uri,dialogTitle:"Save or share your export"});
+    return;
+  }
   const url=URL.createObjectURL(blob);const a=document.createElement("a");
   a.href=url;a.download=name;a.style.display="none";document.body.appendChild(a);a.click();
   setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},2000);
@@ -289,9 +303,23 @@ const SEED_GOALS_PD=normalizeGoals(SEED_GOALS.map((g)=>({...g,Icon:iconOf(g.icon
 const HAS_LS=(()=>{try{if(typeof window==="undefined"||!window.localStorage)return false;window.localStorage.setItem("__cz","1");window.localStorage.removeItem("__cz");return true;}catch{return false;}})();
 const HAS_WS=typeof window!=="undefined"&&window.storage&&typeof window.storage.get==="function";
 const _mem={};
-const Store={  // real websites use localStorage; the artifact preview uses window.storage; otherwise in-memory
-  async get(k){try{if(HAS_LS){const r=window.localStorage.getItem(k);return r?JSON.parse(r):null;}if(HAS_WS){const r=await window.storage.get(k);return r&&r.value?JSON.parse(r.value):null;}return k in _mem?_mem[k]:null;}catch{return null;}},
-  async set(k,v){try{if(HAS_LS){window.localStorage.setItem(k,JSON.stringify(v));return;}if(HAS_WS){await window.storage.set(k,JSON.stringify(v));return;}_mem[k]=v;}catch{}},
+const Store={  // native app uses Capacitor Preferences (survives WebKit storage eviction); web uses localStorage
+  async get(k){try{
+    const P=capPlugin("Preferences");
+    if(P){
+      const r=await P.get({key:k});
+      if(r&&r.value!=null)return JSON.parse(r.value);
+      // First native launch: adopt anything the WebView already had, then own it from here on.
+      if(HAS_LS){const l=window.localStorage.getItem(k);if(l!=null){await P.set({key:k,value:l});return JSON.parse(l);}}
+      return null;
+    }
+    if(HAS_LS){const r=window.localStorage.getItem(k);return r?JSON.parse(r):null;}if(HAS_WS){const r=await window.storage.get(k);return r&&r.value?JSON.parse(r.value):null;}return k in _mem?_mem[k]:null;}catch{return null;}},
+  async set(k,v){try{
+    const P=capPlugin("Preferences");
+    // Always write the value — even null — rather than removing the key, so a cleared token
+    // can't be resurrected by the localStorage fallback above on the next read.
+    if(P){await P.set({key:k,value:JSON.stringify(v??null)});if(HAS_LS){try{window.localStorage.setItem(k,JSON.stringify(v??null));}catch{/* quota */}}return;}
+    if(HAS_LS){window.localStorage.setItem(k,JSON.stringify(v));return;}if(HAS_WS){await window.storage.set(k,JSON.stringify(v));return;}_mem[k]=v;}catch{}},
 };
 const GOALS_KEY="cetele:goals:v3";
 const goalsKey=()=>`${GOALS_KEY}:${ME}`;   // goals are stored per account
@@ -2375,6 +2403,29 @@ export default function App(){
     setRefreshing(false);
   };
   refreshRef.current=refreshLive;
+  // Android hardware back. Without this, back quits the app from anywhere — including out of an
+  // open sheet. Unwinds the UI in the order it was stacked, and only exits from the home tab.
+  const backRef=useRef(null);
+  backRef.current=()=>{
+    if(confirm){setConfirm(null);return;}
+    if(sheet){setSheet(null);return;}
+    if(editProfile){setEditProfile(false);return;}
+    if(detailGoalId){setDetailGoalId(null);return;}
+    if(mentorView){setMentorView(null);return;}
+    if(openMember){setOpenMember(null);return;}
+    if(showSearch){setShowSearch(false);return;}
+    if(showNotifs){setShowNotifs(false);return;}
+    if(showSettings){setShowSettings(false);return;}
+    if(tab!=="feed"){setTab("feed");return;}
+    const App_=capPlugin("App");if(App_&&App_.exitApp)App_.exitApp();
+  };
+  useEffect(()=>{
+    const App_=capPlugin("App");if(!App_||!App_.addListener)return;
+    let sub=null,dead=false;
+    Promise.resolve(App_.addListener("backButton",()=>{if(backRef.current)backRef.current();}))
+      .then((h)=>{if(dead&&h&&h.remove)h.remove();else sub=h;}).catch(()=>{});
+    return ()=>{dead=true;if(sub&&sub.remove)sub.remove();};
+  },[]);
   const hydrateLocal=async()=>{
     cohortStore.restoreSeed();
     const {cohorts}=await cohortStore.load();
