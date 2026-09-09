@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Kohort</string>
+    <string name="title_activity_main">Kohort</string>
+    <string name="package_name">app.kohort.mobile</string>
+    <string name="custom_url_scheme">app.kohort.mobile</string>
+</resources>
