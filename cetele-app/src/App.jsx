@@ -1312,7 +1312,7 @@ function Sheet({title,onClose,children,footer}){
   return (
     <div className="fixed inset-0 flex justify-center" style={{zIndex:70,background:"rgba(28,25,23,.35)"}} onClick={onClose}>
       <div className="self-end w-full flex flex-col" style={{maxWidth:430}} onClick={(e)=>e.stopPropagation()}>
-        <div className="czsheet flex flex-col" style={{background:CANVAS,borderTopLeftRadius:24,borderTopRightRadius:24,maxHeight:"88vh"}}>
+        <div className="czsheet flex flex-col" style={{background:CANVAS,borderTopLeftRadius:24,borderTopRightRadius:24,maxHeight:"88vh",paddingBottom:footer?0:"env(safe-area-inset-bottom)"}}>
           <div className="flex items-center justify-between px-5 pt-4 pb-3" style={{borderBottom:`1px solid ${BORDER}`}}><span style={{fontFamily:FD,fontSize:20,fontWeight:600,color:INK}}>{title}</span><button onClick={onClose} className="flex items-center justify-center rounded-full" style={{width:32,height:32,background:SUNKEN,color:INK2}}><X size={18}/></button></div>
           <div className="overflow-y-auto px-5 py-4" style={{flex:1}}>{children}</div>
           {footer&&<div className="px-5 pt-3" style={{borderTop:`1px solid ${BORDER}`,paddingBottom:"calc(14px + env(safe-area-inset-bottom))"}}>{footer}</div>}
@@ -1923,7 +1923,7 @@ function Onboarding({onDone}){
   const [i,setI]=useState(0);const step=ONBOARD_STEPS[i];const last=i===ONBOARD_STEPS.length-1;const Ic=step.Icon;
   return (
     <div className="fixed inset-0 flex justify-center" style={{zIndex:90,background:CANVAS}}>
-      <div className="w-full flex flex-col" style={{maxWidth:430,padding:"0 24px"}}>
+      <div className="w-full flex flex-col" style={{maxWidth:430,padding:"env(safe-area-inset-top) 24px env(safe-area-inset-bottom)"}}>
         <div className="flex justify-end pt-4"><button onClick={onDone} className="font-semibold" style={{fontSize:13.5,color:INK3}}>Skip</button></div>
         <div className="flex-1 flex flex-col items-center justify-center text-center" style={{paddingBottom:40}}>
           <div className="flex items-center justify-center rounded-3xl mb-7" style={{width:84,height:84,background:PINE}}>
@@ -2024,7 +2024,7 @@ function RecapScreen({stats,onClose}){
   const line=stats.completion>=80?"Outstanding week — you showed up almost every day.":stats.completion>=50?"A solid week. The tally is adding up.":"Every mark counts. Fresh week, fresh start.";
   return (
     <div className="fixed inset-0 flex justify-center" style={{zIndex:94,background:CANVAS,overflowY:"auto"}}>
-      <div className="w-full px-5 pt-4 pb-12" style={{maxWidth:430}}>
+      <div className="w-full px-5 pt-4 pb-12" style={{maxWidth:430,paddingTop:"calc(16px + env(safe-area-inset-top))",paddingBottom:"calc(48px + env(safe-area-inset-bottom))"}}>
         <div className="flex justify-end"><button onClick={onClose} aria-label="Close recap" className="flex items-center justify-center rounded-full" style={{width:32,height:32,background:SUNKEN,color:INK2}}><X size={18}/></button></div>
         <div className="text-center mb-6">
           <div className="flex items-center justify-center rounded-2xl mx-auto mb-3" style={{width:60,height:60,background:PINE}}><Trophy size={28} color="#fff"/></div>
@@ -2690,7 +2690,7 @@ export default function App(){
         .cz-reduce .czsheet,.cz-reduce .czpop,.cz-reduce .czspin,.cz-reduce .czshim,.cz-reduce .cz-draw,.cz-reduce .czSlideIn,.cz-reduce .czRise{animation:none}.cz-reduce button:active{transform:none}`}</style>
 
       <div lang="en" data-rev={cohortRev} className={"cz w-full flex flex-col"+(settings.reduceMotion?" cz-reduce":"")} style={{maxWidth:430,background:CANVAS,minHeight:"100vh"}}>
-        {!onAuthScreen&&<header className="sticky top-0 px-4 py-3 flex items-center justify-between" style={{zIndex:60,background:"#faf9f7e6",backdropFilter:"blur(8px)",borderBottom:`1px solid ${BORDER}`}}>
+        {!onAuthScreen&&<header className="sticky top-0 px-4 py-3 flex items-center justify-between" style={{zIndex:60,paddingTop:"calc(12px + env(safe-area-inset-top))",background:"#faf9f7e6",backdropFilter:"blur(8px)",borderBottom:`1px solid ${BORDER}`}}>
           <button onClick={()=>{setShowSettings(false);setEditProfile(false);setShowSearch(false);setShowNotifs(false);setOpenMember(null);setDetailGoalId(null);setMentorView(null);}} aria-label="Home" className="flex items-center gap-2"><Logo size={32}/><Wordmark size={22}/></button>
           <div className="flex items-center gap-1.5">
             <button onClick={openNotifs} aria-label="Notifications" className="flex items-center justify-center rounded-full" style={{position:"relative",width:34,height:34,color:showNotifs?PINE:INK2,background:showNotifs?PINE_SOFT:"transparent"}}><Bell size={20}/>{inboxCount>0&&<span className="flex items-center justify-center rounded-full" style={{position:"absolute",top:2,right:2,minWidth:15,height:15,padding:"0 3px",background:CHEER,color:"#fff",fontSize:9,fontWeight:800,lineHeight:1}}>{inboxCount>9?"9+":inboxCount}</span>}</button>
@@ -2714,7 +2714,7 @@ export default function App(){
           </div>
         )}
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto" style={onAuthScreen?{paddingTop:"env(safe-area-inset-top)",paddingBottom:"env(safe-area-inset-bottom)"}:undefined}>
           {(settings.server.on&&!authed)?<AuthScreen serverUrl={settings.server.url} onAuthed={onAuthed} onBackToDemo={()=>applyServer({...settings.server,on:false})}/>
           :showNotifs?<NotificationsScreen items={notifications.filter((n)=>(n.minsAgo||0)<NOTIF_MAX_AGE)} requests={friendReqs.incoming} onAccept={acceptReq} onDecline={declineReq} onOpenMember={(id)=>{closeNotifs();setOpenMember(id);}} onBack={closeNotifs} onMarkAll={markAllNotifs} onDismiss={dismissNotif}/>
           :editProfile?<ProfileEditScreen profile={profile} onSave={async(p)=>{try{const saved=await api.patchProfile(p);setProfile((cur)=>(API_BASE&&saved)?{...cur,name:saved.name??p.name,username:saved.username??p.username,avatar:saved.avatar!==undefined?saved.avatar:p.avatar,bio:saved.bio??p.bio,nameChangesLeft:saved.nameChangesLeft??p.nameChangesLeft}:p);setEditProfile(false);}catch(e){setToast(e.message);}}} onBack={()=>setEditProfile(false)}/>
@@ -2732,7 +2732,7 @@ export default function App(){
             :<InsightsScreen goals={goals} subscribed={subscribed}/>}
         </main>
 
-        {!onAuthScreen&&<nav className="sticky bottom-0 flex items-stretch" style={{zIndex:60,background:"#fffffff2",backdropFilter:"blur(8px)",borderTop:`1px solid ${BORDER}`}}>
+        {!onAuthScreen&&<nav className="sticky bottom-0 flex items-stretch" style={{zIndex:60,paddingBottom:"env(safe-area-inset-bottom)",background:"#fffffff2",backdropFilter:"blur(8px)",borderTop:`1px solid ${BORDER}`}}>
           {tabs.map((t)=>{const active=!openMember&&!showSettings&&!editProfile&&!showSearch&&!showNotifs&&!detailGoal&&!mentorView&&safeTab===t.id;const Icon=t.icon;return(
             <button key={t.id} onClick={()=>{setOpenMember(null);setShowSettings(false);setEditProfile(false);setShowSearch(false);setShowNotifs(false);setDetailGoalId(null);setMentorView(null);setTab(t.id);}} className="flex-1 flex flex-col items-center gap-0.5 py-2.5" style={{color:active?PINE:INK3}}>
               <Icon size={21} strokeWidth={active?2.4:2}/><span style={{fontSize:10.5,fontWeight:active?700:500}}>{t.label}</span>
@@ -2749,10 +2749,10 @@ export default function App(){
       {sheet&&sheet.kind==="cohortSettings"&&<CohortSettingsSheet cohortId={sheet.id} onClose={()=>setSheet(null)} onSave={updateCohort} onSetRole={setMemberRole} onRemoveMember={removeMember} onArchive={(id)=>setConfirmArchive(id)} onRegenerate={regenerateInvite} profile={profile}/>}
       {showAccounts&&<AccountPicker current={meId} onPick={switchAccount} onClose={()=>setShowAccounts(false)}/>}
       {showOnboarding&&!onAuthScreen&&<Onboarding onDone={finishOnboarding}/>}
-      {recoveryView&&<div className="fixed inset-0 flex justify-center" style={{zIndex:95,background:CANVAS,overflowY:"auto"}}><div className="w-full" style={{maxWidth:430}}><RecoveryPanel code={recoveryView} context="view" onContinue={()=>setRecoveryView(null)}/></div></div>}
+      {recoveryView&&<div className="fixed inset-0 flex justify-center" style={{zIndex:95,background:CANVAS,overflowY:"auto"}}><div className="w-full" style={{maxWidth:430,paddingTop:"env(safe-area-inset-top)",paddingBottom:"env(safe-area-inset-bottom)"}}><RecoveryPanel code={recoveryView} context="view" onContinue={()=>setRecoveryView(null)}/></div></div>}
       {recap&&!onAuthScreen&&<RecapScreen stats={recap} onClose={()=>setRecap(null)}/>}
       {celebration&&<CelebrationScreen title={celebration.title} streak={celebration.streak} onClose={()=>setCelebration(null)}/>}
-      {toast&&<div className="fixed left-0 right-0 flex justify-center px-4" style={{bottom:96,zIndex:80,pointerEvents:"none"}}><div className="rounded-full px-4 py-2.5 flex items-center gap-2" style={{background:INK,color:"#fff",fontSize:13,fontWeight:600,maxWidth:360,boxShadow:E2}}><AlertCircle size={15} style={{color:"#fca5a5"}}/>{toast}</div></div>}
+      {toast&&<div className="fixed left-0 right-0 flex justify-center px-4" style={{bottom:"calc(96px + env(safe-area-inset-bottom))",zIndex:80,pointerEvents:"none"}}><div className="rounded-full px-4 py-2.5 flex items-center gap-2" style={{background:INK,color:"#fff",fontSize:13,fontWeight:600,maxWidth:360,boxShadow:E2}}><AlertCircle size={15} style={{color:"#fca5a5"}}/>{toast}</div></div>}
       {confirmArchive&&<ConfirmDialog title="Delete this Kohort?" body="This permanently removes the Kohort and its shared goals for every member. This can't be undone." confirmLabel="Delete" danger onCancel={()=>setConfirmArchive(null)} onConfirm={()=>archiveCohort(confirmArchive)}/>}
       {confirmLeave&&(()=>{const c=COHORTS[confirmLeave];const last=c&&c.members&&c.members.length<=1;return <ConfirmDialog title={`Leave ${c?c.name:"cohort"}?`} body={last?"You're the last member, so this Kohort and its shared goals will be permanently deleted. This can't be undone.":"You'll stop seeing its shared goals and standings. You can rejoin later with the invite code."} confirmLabel={last?"Leave & delete":"Leave"} danger onCancel={()=>setConfirmLeave(null)} onConfirm={()=>{leaveCohort(confirmLeave);setConfirmLeave(null);}}/>;})()}
       {confirmDelete&&<ConfirmDialog title="Delete this goal?" body="Its weekly history and streak will be removed. This can't be undone." confirmLabel="Delete" danger onCancel={()=>setConfirmDelete(null)} onConfirm={()=>{deleteGoal(confirmDelete);setConfirmDelete(null);setDetailGoalId(null);}}/>}

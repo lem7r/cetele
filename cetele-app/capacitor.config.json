@@ -5,6 +5,11 @@
   "android": {
     "backgroundColor": "#faf9f7"
   },
+  "ios": {
+    "backgroundColor": "#faf9f7",
+    "contentInset": "never",
+    "scrollEnabled": true
+  },
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 900,
